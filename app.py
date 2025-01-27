@@ -36,9 +36,9 @@ if not api_key:
 
 # 初始化 OpenAI 客戶端
 try:
-    client = OpenAI(api_key=api_key)
+    client = OpenAI()  # 使用環境變量中的 API key
     # 測試 API 連接
-    client.models.list()
+    response = client.models.list()
     app.logger.info('OpenAI client initialized successfully')
 except Exception as e:
     app.logger.error(f'Failed to initialize OpenAI client: {str(e)}')
