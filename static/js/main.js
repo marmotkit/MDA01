@@ -197,8 +197,8 @@ function updateRecognitionLanguage(side) {
 
 // 更新錄音 UI
 function updateRecordingUI() {
-    const leftButton = document.getElementById('startLeftRecording');
-    const rightButton = document.getElementById('startRightRecording');
+    const leftButton = document.getElementById('speakLeft');
+    const rightButton = document.getElementById('speakRight');
     const stopButton = document.getElementById('stopConversation');
     
     if (!isRecording) {
@@ -340,12 +340,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // 左側發言按鈕
-    document.getElementById('startLeftRecording').addEventListener('click', function() {
+    document.getElementById('speakLeft').addEventListener('click', function() {
         startRecording('left');
     });
     
     // 右側發言按鈕
-    document.getElementById('startRightRecording').addEventListener('click', function() {
+    document.getElementById('speakRight').addEventListener('click', function() {
         startRecording('right');
     });
 
