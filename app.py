@@ -31,28 +31,28 @@ load_dotenv()
 # 檢查 API 金鑰
 api_key = os.getenv('OPENAI_API_KEY')
 if not api_key:
-    app.logger.error('No OpenAI API key found')
-else:
-    app.logger.info('OpenAI API key loaded successfully')
+    app.logger.error('No OpenAI API key found in environment variables')
+    raise RuntimeError('OpenAI API key not found. Please set OPENAI_API_KEY environment variable.')
 
-def get_openai_client():
-    """延遲初始化 OpenAI 客戶端"""
-    try:
-        return OpenAI(api_key=api_key)
-    except Exception as e:
-        app.logger.error(f'Error initializing OpenAI client: {str(e)}')
-        return None
+# 初始化 OpenAI 客戶端
+try:
+    client = OpenAI(api_key=api_key)
+    # 測試 API 連接
+    client.models.list()
+    app.logger.info('OpenAI client initialized successfully')
+except Exception as e:
+    app.logger.error(f'Failed to initialize OpenAI client: {str(e)}')
+    client = None
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# 翻譯路由
 @app.route('/translate', methods=['POST'])
 def translate():
-    if not api_key:
-        app.logger.error('Translation attempted without API key')
-        return jsonify({"error": "未設置 OpenAI API 金鑰"}), 500
+    if not client:
+        app.logger.error('Translation attempted but OpenAI client is not initialized')
+        return jsonify({"error": "翻譯服務未正確初始化，請檢查 API 金鑰設置"}), 500
 
     try:
         # 獲取目標語言的名稱
@@ -75,7 +75,7 @@ def translate():
         source_lang = data.get('source_lang', 'auto')
         target_lang = data.get('target_lang', 'en-US')
 
-        app.logger.info(f'Translation request - From: {source_lang}, To: {target_lang}')
+        app.logger.info(f'Translation request - From: {source_lang}, To: {target_lang}, Text: {text[:50]}...')
 
         if not text:
             app.logger.error('Empty text submitted for translation')
@@ -98,23 +98,23 @@ def translate():
             2. 保持原文的語氣和格式
             3. 使用地道的表達方式"""
 
-        # 調用 OpenAI API
-        client = get_openai_client()
-        if not client:
-            return jsonify({"error": "無法初始化翻譯服務"}), 500
-
         app.logger.info('Sending request to OpenAI')
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ]
-        )
+        try:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": text}
+                ]
+            )
 
-        translation = response.choices[0].message.content.strip()
-        app.logger.info('Translation completed successfully')
-        return jsonify({"translation": translation})
+            translation = response.choices[0].message.content.strip()
+            app.logger.info('Translation completed successfully')
+            return jsonify({"translation": translation})
+
+        except Exception as e:
+            app.logger.error(f'OpenAI API error: {str(e)}')
+            return jsonify({"error": f"OpenAI API 錯誤：{str(e)}"}), 500
 
     except Exception as e:
         app.logger.error(f'Translation error: {str(e)}')
