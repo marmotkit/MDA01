@@ -150,7 +150,7 @@ function updateRecordingUI() {
     if (leftButton && rightButton && stopButton) {
         leftButton.disabled = isRecording && currentSide !== 'left';
         rightButton.disabled = isRecording && currentSide !== 'right';
-        stopButton.disabled = !isRecording;
+        stopButton.disabled = false;
         
         // 更新按鈕樣式
         if (isRecording) {
@@ -230,52 +230,28 @@ function updateRecognitionLanguage(side) {
     recognition.lang = lang;
 }
 
-// 互換語言
-function swapLanguages() {
+// 交換雙向翻譯的語言
+function swapBidirectionalLanguages() {
     const leftLang = document.getElementById('leftLanguage');
     const rightLang = document.getElementById('rightLanguage');
     
-    // 保存當前選中的文本
-    const leftText = leftLang.options[leftLang.selectedIndex].text;
-    const rightText = rightLang.options[rightLang.selectedIndex].text;
-    const leftValue = leftLang.value;
-    const rightValue = rightLang.value;
-    
-    // 交換值和文本
-    leftLang.value = rightValue;
-    rightLang.value = leftValue;
-    
-    // 更新顯示的文本
-    Array.from(leftLang.options).forEach(option => {
-        if (option.value === rightValue) {
-            option.selected = true;
-        }
-    });
-    
-    Array.from(rightLang.options).forEach(option => {
-        if (option.value === leftValue) {
-            option.selected = true;
-        }
-    });
+    if (leftLang && rightLang) {
+        const tempValue = leftLang.value;
+        leftLang.value = rightLang.value;
+        rightLang.value = tempValue;
+    }
 }
 
-// 互換翻譯語言
-function swapTranslationLanguages() {
+// 交換單向翻譯的語言
+function swapUnidirectionalLanguages() {
     const sourceLang = document.getElementById('sourceLanguage');
     const targetLang = document.getElementById('targetLanguage');
     
-    // 保存當前選中的值
-    const sourceValue = sourceLang.value;
-    const targetValue = targetLang.value;
-    
-    // 如果來源語言是自動檢測，則不進行交換
-    if (sourceValue === 'auto') {
-        return;
+    if (sourceLang && targetLang) {
+        const tempValue = sourceLang.value;
+        sourceLang.value = targetLang.value;
+        targetLang.value = tempValue;
     }
-    
-    // 交換值
-    sourceLang.value = targetValue;
-    targetLang.value = sourceValue;
 }
 
 // 翻譯文本
@@ -348,6 +324,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (stopSingleBtn) {
         stopSingleBtn.addEventListener('click', stopRecording);
+    }
+
+    // 語言切換按鈕
+    const swapBidirectionalBtn = document.getElementById('swapBidirectionalLanguages');
+    const swapUnidirectionalBtn = document.getElementById('swapUnidirectionalLanguages');
+    
+    if (swapBidirectionalBtn) {
+        swapBidirectionalBtn.addEventListener('click', swapBidirectionalLanguages);
+    }
+    
+    if (swapUnidirectionalBtn) {
+        swapUnidirectionalBtn.addEventListener('click', swapUnidirectionalLanguages);
     }
 
     // 初始化 UI
