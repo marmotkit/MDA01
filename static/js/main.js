@@ -19,6 +19,10 @@ function initSpeechRecognition() {
             isRecording = false;
             currentSide = null;
             updateRecordingUI();
+            // 如果是意外停止，自動重新開始
+            if (currentSide) {
+                startRecording(currentSide);
+            }
         };
 
         recognition.onresult = (event) => {
@@ -45,8 +49,24 @@ function initSpeechRecognition() {
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
+            if (event.error === 'not-allowed') {
+                alert('請允許使用麥克風以啟用語音功能');
+            }
             stopRecording();
         };
+
+        // 在頁面加載時請求麥克風權限
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                stream.getTracks().forEach(track => track.stop());
+                console.log('麥克風權限已獲得');
+            })
+            .catch(err => {
+                console.error('無法獲得麥克風權限:', err);
+                alert('請允許使用麥克風以啟用語音功能');
+            });
+    } else {
+        alert('您的瀏覽器不支持語音識別功能');
     }
 }
 
@@ -135,13 +155,21 @@ function speakText(text, lang) {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
-    
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
     // 在 iOS Safari 上的特殊處理
     if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
         // 確保語音合成已經準備好
         if (speechSynthesis.speaking) {
             speechSynthesis.cancel();
         }
+
+        // 使用 speechSynthesis.speak() 前先暫停再恢復
+        speechSynthesis.pause();
+        speechSynthesis.resume();
+
         // 等待一小段時間再開始朗讀
         setTimeout(() => {
             window.speechSynthesis.speak(utterance);
@@ -149,6 +177,15 @@ function speakText(text, lang) {
     } else {
         window.speechSynthesis.speak(utterance);
     }
+
+    // 處理朗讀完成事件
+    utterance.onend = () => {
+        console.log('朗讀完成');
+    };
+
+    utterance.onerror = (event) => {
+        console.error('朗讀錯誤:', event);
+    };
 }
 
 // 清除對話
