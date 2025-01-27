@@ -152,152 +152,90 @@ async function translateAndSpeak(text, side) {
     }
 }
 
-// 初始化語音合成
-let synth = window.speechSynthesis;
+// 初始化語音播放器
+let audioPlayer = new Audio();
 let speaking = false;
-
-// 在頁面加載時初始化
-document.addEventListener('DOMContentLoaded', () => {
-    // 初始化語音合成
-    if (!synth) {
-        console.error('瀏覽器不支持語音合成');
-        return;
-    }
-
-    // 在 iOS 上預熱語音合成
-    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-        // 預加載語音
-        loadVoices();
-        // 監聽語音加載
-        if (synth.onvoiceschanged !== undefined) {
-            synth.onvoiceschanged = loadVoices;
-        }
-    }
-});
-
-// 加載語音
-function loadVoices() {
-    return new Promise((resolve) => {
-        let voices = synth.getVoices();
-        if (voices.length > 0) {
-            resolve(voices);
-        } else {
-            synth.onvoiceschanged = () => {
-                voices = synth.getVoices();
-                resolve(voices);
-            };
-        }
-    });
-}
-
-// 獲取指定語言的語音
-function getVoiceForLanguage(lang) {
-    const voices = synth.getVoices();
-    // 嘗試找到完全匹配的語音
-    let voice = voices.find(v => v.lang === lang);
-    if (!voice) {
-        // 如果沒有完全匹配的，嘗試找到語言代碼開頭匹配的
-        voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-    }
-    if (!voice) {
-        // 如果還是沒有找到，使用第一個可用的語音
-        voice = voices[0];
-    }
-    return voice;
-}
-
-// 確保語音合成在頁面隱藏時暫停，顯示時恢復
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        if (speaking) {
-            synth.pause();
-        }
-    } else {
-        if (speaking) {
-            synth.resume();
-        }
-    }
-});
 
 // 朗讀文字
 async function speakText(text, lang) {
-    if (!synth) {
-        console.error('瀏覽器不支持語音合成');
-        return;
-    }
+    try {
+        // 取消當前播放
+        if (speaking) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        }
 
-    // 取消之前的朗讀
-    synth.cancel();
-    speaking = false;
+        // 發送 TTS 請求
+        const response = await fetch('/tts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: text,
+                lang: lang
+            })
+        });
 
-    return new Promise(async (resolve, reject) => {
+        if (!response.ok) {
+            throw new Error('TTS 請求失敗');
+        }
+
+        // 獲取音頻 blob
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        // 設置音頻
+        audioPlayer.src = url;
+        
+        // 設置事件處理
+        audioPlayer.onplay = () => {
+            speaking = true;
+            console.log('開始播放');
+        };
+
+        audioPlayer.onended = () => {
+            speaking = false;
+            URL.revokeObjectURL(url);
+            console.log('播放完成');
+        };
+
+        audioPlayer.onerror = (error) => {
+            speaking = false;
+            URL.revokeObjectURL(url);
+            console.error('播放錯誤:', error);
+        };
+
+        // 播放音頻
         try {
-            // 等待語音加載
-            await loadVoices();
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = lang;
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-            utterance.volume = 1.0;
-
-            // 設置合適的語音
-            utterance.voice = getVoiceForLanguage(lang);
-
-            // 處理各種事件
-            utterance.onstart = () => {
-                speaking = true;
-                console.log('開始朗讀:', text);
-            };
-
-            utterance.onend = () => {
-                speaking = false;
-                console.log('朗讀完成');
-                resolve();
-            };
-
-            utterance.onerror = (event) => {
-                speaking = false;
-                console.error('朗讀錯誤:', event);
-                reject(event);
-            };
-
-            // 在 iOS Safari 上的特殊處理
+            await audioPlayer.play();
+        } catch (error) {
+            console.error('播放失敗:', error);
+            // 在 iOS 上，需要用戶交互才能播放
             if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-                // 使用 click 事件來觸發語音合成
-                const speakOnClick = () => {
-                    document.removeEventListener('click', speakOnClick);
-                    
-                    // 開始朗讀
-                    synth.speak(utterance);
-
-                    // 如果 3 秒後還沒有開始朗讀，就重試
-                    setTimeout(() => {
-                        if (!speaking) {
-                            console.log('重試朗讀');
-                            synth.cancel();
-                            synth.speak(utterance);
-                        }
-                    }, 3000);
+                const playOnClick = async () => {
+                    document.removeEventListener('click', playOnClick);
+                    try {
+                        await audioPlayer.play();
+                    } catch (retryError) {
+                        console.error('重試播放失敗:', retryError);
+                    }
                 };
 
-                // 如果用戶已經點擊過了，直接朗讀
+                // 如果用戶已經交互過，直接嘗試播放
                 if (document.body.classList.contains('user-interacted')) {
-                    speakOnClick();
+                    await playOnClick();
                 } else {
                     // 等待用戶點擊
-                    document.addEventListener('click', speakOnClick, { once: true });
-                    console.log('等待用戶點擊以開始朗讀...');
+                    document.addEventListener('click', playOnClick, { once: true });
+                    console.log('等待用戶點擊以開始播放...');
                 }
-            } else {
-                // 非 iOS 設備直接朗讀
-                synth.speak(utterance);
             }
-        } catch (error) {
-            console.error('語音合成準備失敗:', error);
-            reject(error);
         }
-    });
+    } catch (error) {
+        console.error('TTS 錯誤:', error);
+        speaking = false;
+    }
 }
 
 // 標記用戶已交互

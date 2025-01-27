@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import openai
 import os
 from dotenv import load_dotenv
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
+from gtts import gTTS
+import tempfile
 
 app = Flask(__name__)
 
@@ -108,6 +110,32 @@ def translate():
     except Exception as e:
         app.logger.error(f'Translation error: {str(e)}')
         return jsonify({"error": f"翻譯過程中發生錯誤：{str(e)}"}), 500
+
+@app.route('/tts', methods=['POST'])
+def text_to_speech():
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        lang = data.get('lang', 'en')
+
+        # 創建臨時文件
+        temp_dir = tempfile.gettempdir()
+        temp_file = os.path.join(temp_dir, 'speech.mp3')
+
+        # 生成語音文件
+        tts = gTTS(text=text, lang=lang)
+        tts.save(temp_file)
+
+        # 返回音頻文件
+        return send_file(
+            temp_file,
+            mimetype='audio/mpeg',
+            as_attachment=True,
+            download_name='speech.mp3'
+        )
+    except Exception as e:
+        print(f"TTS error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
