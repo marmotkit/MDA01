@@ -92,7 +92,7 @@ function startRecording(side = null) {
     try {
         // 如果當前正在錄音，先停止
         if (isRecording) {
-            stopRecording();
+            recognition.stop();
             // 添加延遲以確保錄音完全停止
             setTimeout(() => {
                 startNewRecording(side);
@@ -120,6 +120,7 @@ function startNewRecording(side) {
     }
     
     recognition.start();
+    updateRecordingUI();
 }
 
 // 停止錄音
@@ -127,10 +128,10 @@ function stopRecording() {
     console.log('停止錄音');
     if (recognition && isRecording) {
         recognition.stop();
-        isRecording = false;
-        currentSide = null;
-        updateRecordingUI();
     }
+    isRecording = false;
+    currentSide = null;
+    updateRecordingUI();
 }
 
 // 朗讀文字
@@ -146,44 +147,29 @@ function updateRecordingUI() {
     const rightButton = document.getElementById('speakRight');
     const stopButton = document.getElementById('stopConversation');
     
-    // 雙向翻譯按鈕
     if (leftButton && rightButton && stopButton) {
-        if (!isRecording) {
-            leftButton.disabled = false;
-            rightButton.disabled = false;
-            stopButton.disabled = true;
-            leftButton.classList.remove('btn-secondary');
-            rightButton.classList.remove('btn-secondary');
-            leftButton.classList.add('btn-primary');
-            rightButton.classList.add('btn-primary');
-        } else {
-            stopButton.disabled = false;
-            
+        leftButton.disabled = isRecording && currentSide !== 'left';
+        rightButton.disabled = isRecording && currentSide !== 'right';
+        stopButton.disabled = !isRecording;
+        
+        // 更新按鈕樣式
+        if (isRecording) {
             if (currentSide === 'left') {
                 leftButton.classList.remove('btn-primary');
-                leftButton.classList.add('btn-secondary');
+                leftButton.classList.add('btn-danger');
                 rightButton.classList.add('btn-primary');
-                rightButton.classList.remove('btn-secondary');
-            } else {
+                rightButton.classList.remove('btn-danger');
+            } else if (currentSide === 'right') {
                 rightButton.classList.remove('btn-primary');
-                rightButton.classList.add('btn-secondary');
+                rightButton.classList.add('btn-danger');
                 leftButton.classList.add('btn-primary');
-                leftButton.classList.remove('btn-secondary');
+                leftButton.classList.remove('btn-danger');
             }
-        }
-    }
-
-    // 單向翻譯按鈕
-    const startSingleButton = document.getElementById('startRecordingSingle');
-    const stopSingleButton = document.getElementById('stopRecordingSingle');
-    
-    if (startSingleButton && stopSingleButton) {
-        if (!isRecording) {
-            startSingleButton.disabled = false;
-            stopSingleButton.disabled = true;
         } else {
-            startSingleButton.disabled = true;
-            stopSingleButton.disabled = false;
+            leftButton.classList.add('btn-primary');
+            leftButton.classList.remove('btn-danger');
+            rightButton.classList.add('btn-primary');
+            rightButton.classList.remove('btn-danger');
         }
     }
 }
@@ -345,23 +331,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (speakLeftBtn) {
-        speakLeftBtn.addEventListener('click', () => {
-            if (currentSide === 'left') {
-                stopRecording();
-            } else {
-                startRecording('left');
-            }
-        });
+        speakLeftBtn.addEventListener('click', () => startRecording('left'));
     }
     
     if (speakRightBtn) {
-        speakRightBtn.addEventListener('click', () => {
-            if (currentSide === 'right') {
-                stopRecording();
-            } else {
-                startRecording('right');
-            }
-        });
+        speakRightBtn.addEventListener('click', () => startRecording('right'));
     }
 
     // 單向翻譯按鈕
@@ -375,84 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (stopSingleBtn) {
         stopSingleBtn.addEventListener('click', stopRecording);
     }
-    
-    // 按鈕事件監聽器
-    document.getElementById('startRecording').addEventListener('click', () => startRecording());
-    document.getElementById('stopRecording').addEventListener('click', stopRecording);
-    
-    // 語言互換按鈕事件
-    document.getElementById('swapLanguages').addEventListener('click', swapLanguages);
-    document.getElementById('swapTranslationLanguages').addEventListener('click', swapTranslationLanguages);
-    
-    // 靜音模式切換事件
-    document.getElementById('muteModeBidirectional').addEventListener('change', function() {
-        const icon = this.nextElementSibling.querySelector('i');
-        if (this.checked) {
-            icon.classList.remove('fa-volume-up');
-            icon.classList.add('fa-volume-mute');
-        } else {
-            icon.classList.remove('fa-volume-mute');
-            icon.classList.add('fa-volume-up');
-        }
-    });
-    
-    document.getElementById('muteModeUnidirectional').addEventListener('change', function() {
-        const icon = this.nextElementSibling.querySelector('i');
-        if (this.checked) {
-            icon.classList.remove('fa-volume-up');
-            icon.classList.add('fa-volume-mute');
-        } else {
-            icon.classList.remove('fa-volume-mute');
-            icon.classList.add('fa-volume-up');
-        }
-    });
-    
-    // 其他按鈕事件
-    document.getElementById('clearChat').addEventListener('click', function() {
-        document.getElementById('chatContainer').innerHTML = '';
-    });
-    
-    document.getElementById('translate').addEventListener('click', async function() {
-        const text = document.getElementById('inputText').value;
-        const sourceLang = document.getElementById('sourceLanguage').value;
-        const targetLang = document.getElementById('targetLanguage').value;
-        
-        if (text.trim() !== '') {
-            const translation = await translateText(text, sourceLang, targetLang);
-            document.getElementById('translationResult').textContent = translation;
-            speakText(translation, targetLang);
-        }
-    });
-    
-    document.getElementById('clearInput').addEventListener('click', function() {
-        document.getElementById('inputText').value = '';
-        document.getElementById('translationResult').textContent = '';
-    });
-    
-    document.getElementById('speakButton').addEventListener('click', function() {
-        const text = document.getElementById('translationResult').textContent;
-        const targetLang = document.getElementById('targetLanguage').value;
-        if (text.trim() !== '') {
-            speakText(text, targetLang);
-        }
-    });
-    
-    // 語言選擇變更事件
-    document.getElementById('leftLanguage').addEventListener('change', function() {
-        if (currentSide === 'left') {
-            updateRecognitionLanguage('left');
-        }
-    });
-    
-    document.getElementById('rightLanguage').addEventListener('change', function() {
-        if (currentSide === 'right') {
-            updateRecognitionLanguage('right');
-        }
-    });
-    
-    document.getElementById('sourceLanguage').addEventListener('change', function() {
-        if (!currentSide) {
-            updateRecognitionLanguage();
-        }
-    });
+
+    // 初始化 UI
+    updateRecordingUI();
 });
