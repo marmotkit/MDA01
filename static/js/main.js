@@ -101,91 +101,164 @@ function stopRecording() {
     }
 }
 
-// 翻譯並朗讀
+// 翻譯並朗讀文字
 async function translateAndSpeak(text, side) {
-    if (!text || !side) return;
-
-    const sourceLang = side === 'left' ? 
-        document.getElementById('leftLanguage').value : 
-        document.getElementById('rightLanguage').value;
-    const targetLang = side === 'left' ? 
-        document.getElementById('rightLanguage').value : 
-        document.getElementById('leftLanguage').value;
-
     try {
+        const sourceLang = side === 'left' ? getLeftLanguage() : getRightLanguage();
+        const targetLang = side === 'left' ? getRightLanguage() : getLeftLanguage();
+
         const response = await fetch('/translate', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                text,
+                text: text,
                 source_lang: sourceLang,
                 target_lang: targetLang
             })
         });
 
-        if (!response.ok) throw new Error('Translation failed');
+        if (!response.ok) {
+            throw new Error('翻譯請求失敗');
+        }
 
         const data = await response.json();
+        
         if (data.translation) {
+            // 添加翻譯結果到對話框
             addChatBubble(data.translation, side === 'left' ? 'right' : 'left');
             
+            // 檢查是否處於靜音模式
             const muteMode = document.getElementById('muteModeBidirectional').checked;
             if (!muteMode) {
-                speakText(data.translation, targetLang);
+                try {
+                    // 使用新的朗讀方式
+                    await speakText(data.translation, targetLang);
+                } catch (error) {
+                    console.error('朗讀錯誤:', error);
+                    // 如果朗讀失敗，嘗試重新朗讀
+                    try {
+                        await speakText(data.translation, targetLang);
+                    } catch (retryError) {
+                        console.error('重試朗讀失敗:', retryError);
+                    }
+                }
             }
         }
     } catch (error) {
-        console.error('Translation error:', error);
-        addChatBubble('翻譯錯誤，請重試', side === 'left' ? 'right' : 'left');
+        console.error('翻譯錯誤:', error);
+        alert('翻譯過程中發生錯誤');
     }
 }
 
+// 初始化語音合成
+let synth = window.speechSynthesis;
+let speaking = false;
+
+// 在頁面加載時初始化語音合成
+document.addEventListener('DOMContentLoaded', () => {
+    // 在 iOS 上預熱語音合成
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        // 創建一個空的語音實例並播放，這樣可以初始化語音引擎
+        const utterance = new SpeechSynthesisUtterance('');
+        synth.speak(utterance);
+    }
+});
+
+// 確保語音合成在頁面隱藏時暫停，顯示時恢復
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (speaking) {
+            synth.pause();
+        }
+    } else {
+        if (speaking) {
+            synth.resume();
+        }
+    }
+});
+
 // 朗讀文字
 function speakText(text, lang) {
-    // 檢查瀏覽器是否支持語音合成
-    if (!window.speechSynthesis) {
-        console.error('瀏覽器不支持語音合成');
-        return;
-    }
-
-    // 取消之前的朗讀
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    // 在 iOS Safari 上的特殊處理
-    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-        // 確保語音合成已經準備好
-        if (speechSynthesis.speaking) {
-            speechSynthesis.cancel();
+    return new Promise((resolve, reject) => {
+        if (!synth) {
+            console.error('瀏覽器不支持語音合成');
+            reject('瀏覽器不支持語音合成');
+            return;
         }
 
-        // 使用 speechSynthesis.speak() 前先暫停再恢復
-        speechSynthesis.pause();
-        speechSynthesis.resume();
+        // 取消之前的朗讀
+        synth.cancel();
+        speaking = false;
 
-        // 等待一小段時間再開始朗讀
-        setTimeout(() => {
-            window.speechSynthesis.speak(utterance);
-        }, 100);
-    } else {
-        window.speechSynthesis.speak(utterance);
-    }
+        // 在 iOS 上，需要先解鎖音頻上下文
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            // 創建一個音頻上下文並播放一個短暫的聲音
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(0.1);
+        }
 
-    // 處理朗讀完成事件
-    utterance.onend = () => {
-        console.log('朗讀完成');
-    };
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
 
-    utterance.onerror = (event) => {
-        console.error('朗讀錯誤:', event);
-    };
+        // 處理各種事件
+        utterance.onstart = () => {
+            speaking = true;
+            console.log('開始朗讀');
+        };
+
+        utterance.onend = () => {
+            speaking = false;
+            console.log('朗讀完成');
+            resolve();
+        };
+
+        utterance.onerror = (event) => {
+            speaking = false;
+            console.error('朗讀錯誤:', event);
+            reject(event);
+        };
+
+        // 在 iOS Safari 上的特殊處理
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            // 確保語音合成已經準備好
+            synth.cancel();
+
+            // 使用 setTimeout 來確保語音命令被正確處理
+            setTimeout(() => {
+                try {
+                    // 強制刷新語音狀態
+                    synth.pause();
+                    synth.resume();
+                    
+                    // 開始朗讀
+                    synth.speak(utterance);
+
+                    // 如果 5 秒後還沒有開始朗讀，就重試
+                    setTimeout(() => {
+                        if (!speaking) {
+                            console.log('重試朗讀');
+                            synth.cancel();
+                            synth.speak(utterance);
+                        }
+                    }, 5000);
+                } catch (error) {
+                    console.error('語音合成錯誤:', error);
+                    reject(error);
+                }
+            }, 100);
+        } else {
+            // 非 iOS 設備直接朗讀
+            synth.speak(utterance);
+        }
+    });
 }
 
 // 清除對話
@@ -328,3 +401,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化 UI
     updateRecordingUI();
 });
+
+// 取得左側語言
+function getLeftLanguage() {
+    return document.getElementById('leftLanguage').value;
+}
+
+// 取得右側語言
+function getRightLanguage() {
+    return document.getElementById('rightLanguage').value;
+}
