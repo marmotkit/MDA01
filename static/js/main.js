@@ -141,8 +141,17 @@ function speakText(text, lang) {
     window.speechSynthesis.speak(utterance);
 }
 
+// 清除對話
+function clearChat() {
+    const chatContainer = document.getElementById('chatContainer');
+    if (chatContainer) {
+        chatContainer.innerHTML = '';
+    }
+}
+
 // 更新錄音 UI
 function updateRecordingUI() {
+    // 雙向翻譯按鈕
     const leftButton = document.getElementById('speakLeft');
     const rightButton = document.getElementById('speakRight');
     const stopButton = document.getElementById('stopConversation');
@@ -170,6 +179,22 @@ function updateRecordingUI() {
             leftButton.classList.remove('btn-danger');
             rightButton.classList.add('btn-primary');
             rightButton.classList.remove('btn-danger');
+        }
+    }
+
+    // 單向翻譯按鈕
+    const startSingleBtn = document.getElementById('startRecordingSingle');
+    const stopSingleBtn = document.getElementById('stopRecordingSingle');
+    
+    if (startSingleBtn && stopSingleBtn) {
+        if (isRecording && !currentSide) {
+            startSingleBtn.classList.remove('btn-primary');
+            startSingleBtn.classList.add('btn-danger');
+            stopSingleBtn.disabled = false;
+        } else {
+            startSingleBtn.classList.add('btn-primary');
+            startSingleBtn.classList.remove('btn-danger');
+            stopSingleBtn.disabled = true;
         }
     }
 }
@@ -301,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const stopConversationBtn = document.getElementById('stopConversation');
     const speakLeftBtn = document.getElementById('speakLeft');
     const speakRightBtn = document.getElementById('speakRight');
+    const clearChatBtn = document.getElementById('clearChat');
     
     if (stopConversationBtn) {
         stopConversationBtn.addEventListener('click', stopRecording);
@@ -314,12 +340,20 @@ document.addEventListener('DOMContentLoaded', function() {
         speakRightBtn.addEventListener('click', () => startRecording('right'));
     }
 
+    if (clearChatBtn) {
+        clearChatBtn.addEventListener('click', clearChat);
+    }
+
     // 單向翻譯按鈕
     const startSingleBtn = document.getElementById('startRecordingSingle');
     const stopSingleBtn = document.getElementById('stopRecordingSingle');
     
     if (startSingleBtn) {
-        startSingleBtn.addEventListener('click', () => startRecording());
+        startSingleBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            }
+        });
     }
     
     if (stopSingleBtn) {
