@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能翻譯助手</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-language"></i> AI 智能翻譯助手
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <!-- 雙向對話翻譯器 -->
+                <section class="translator-section mb-5">
+                    <h2><i class="fas fa-comments"></i> 雙向對話翻譯</h2>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="language-controls">
+                                <div class="language-select-group">
+                                    <label>左側語言</label>
+                                    <select id="leftLanguage" class="form-select">
+                                        <option value="zh-TW">繁體中文</option>
+                                        <option value="zh-CN">简体中文</option>
+                                        <option value="en-US">English</option>
+                                        <option value="ja-JP">日本語</option>
+                                        <option value="ko-KR">한국어</option>
+                                        <option value="th-TH">ภาษาไทย</option>
+                                        <option value="vi-VN">Tiếng Việt</option>
+                                    </select>
+                                </div>
+                                <button id="swapLanguages" class="btn btn-outline-primary">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <div class="language-select-group">
+                                    <label>右側語言</label>
+                                    <select id="rightLanguage" class="form-select">
+                                        <option value="en-US">English</option>
+                                        <option value="zh-TW">繁體中文</option>
+                                        <option value="zh-CN">简体中文</option>
+                                        <option value="ja-JP">日本語</option>
+                                        <option value="ko-KR">한국어</option>
+                                        <option value="th-TH">ภาษาไทย</option>
+                                        <option value="vi-VN">Tiếng Việt</option>
+                                    </select>
+                                </div>
+                                <div class="form-check form-switch mute-switch">
+                                    <input class="form-check-input" type="checkbox" id="muteModeBidirectional">
+                                    <label class="form-check-label" for="muteModeBidirectional">
+                                        <i class="fas fa-volume-mute"></i>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mode-controls text-center mb-3">
+                                <!-- <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="muteModeBidirectional">
+                                    <label class="form-check-label" for="muteModeBidirectional">
+                                        <i class="fas fa-volume-mute"></i> 靜音模式
+                                    </label>
+                                </div> -->
+                            </div>
+                            <div class="conversation-controls text-center mb-3">
+                                <div class="btn-group">
+                                    <button class="btn btn-primary btn-lg" id="speakLeft">
+                                        <i class="fas fa-microphone"></i> 左側發言
+                                    </button>
+                                    <button class="btn btn-danger btn-lg" id="stopConversation">
+                                        <i class="fas fa-stop-circle"></i> 停止對話
+                                    </button>
+                                    <button class="btn btn-primary btn-lg" id="speakRight">
+                                        <i class="fas fa-microphone"></i> 右側發言
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="recording-status text-center">
+                                <span id="leftStatus" class="badge" style="display: none;">
+                                    <i class="fas fa-circle"></i> 左側錄音中...
+                                </span>
+                                <span id="rightStatus" class="badge" style="display: none;">
+                                    <i class="fas fa-circle"></i> 右側錄音中...
+                                </span>
+                            </div>
+                            <div class="chat-container" id="chatContainer">
+                                <!-- 對話內容將在這裡動態添加 -->
+                            </div>
+                            <div class="text-center mt-3">
+                                <button class="btn btn-outline-danger" id="clearChat">
+                                    <i class="fas fa-trash"></i> 清除對話
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 單向翻譯器 -->
+                <section class="translator-section mb-5">
+                    <h2><i class="fas fa-language"></i> 單向翻譯</h2>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="translation-section">
+                                <div class="language-controls">
+                                    <div class="language-select-group">
+                                        <label>來源語言</label>
+                                        <select id="sourceLanguage" class="form-select">
+                                            <option value="zh-TW">繁體中文</option>
+                                            <option value="zh-CN">简体中文</option>
+                                            <option value="en-US">English</option>
+                                            <option value="ja-JP">日本語</option>
+                                            <option value="ko-KR">한국어</option>
+                                            <option value="th-TH">ภาษาไทย</option>
+                                            <option value="vi-VN">Tiếng Việt</option>
+                                            <option value="auto">自動檢測</option>
+                                        </select>
+                                    </div>
+                                    <button id="swapTranslationLanguages" class="btn btn-outline-primary">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </button>
+                                    <div class="language-select-group">
+                                        <label>目標語言</label>
+                                        <select id="targetLanguage" class="form-select">
+                                            <option value="en-US">English</option>
+                                            <option value="zh-TW">繁體中文</option>
+                                            <option value="zh-CN">简体中文</option>
+                                            <option value="ja-JP">日本語</option>
+                                            <option value="ko-KR">한국어</option>
+                                            <option value="th-TH">ภาษาไทย</option>
+                                            <option value="vi-VN">Tiếng Việt</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-check form-switch mute-switch">
+                                        <input class="form-check-input" type="checkbox" id="muteModeUnidirectional">
+                                        <label class="form-check-label" for="muteModeUnidirectional">
+                                            <i class="fas fa-volume-mute"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                                <!-- <div class="mode-controls text-center mb-3">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" id="muteModeUnidirectional">
+                                        <label class="form-check-label" for="muteModeUnidirectional">
+                                            <i class="fas fa-volume-mute"></i> 靜音模式
+                                        </label>
+                                    </div>
+                                </div> -->
+                                <div class="translation-controls">
+                                    <div class="input-area">
+                                        <textarea class="form-control" id="inputText" rows="3" 
+                                            placeholder="在這裡輸入要翻譯的文字，或使用語音輸入..."></textarea>
+                                        <div class="btn-group mt-2">
+                                            <button class="btn btn-primary" id="startRecording">
+                                                <i class="fas fa-microphone"></i> 開始錄音
+                                            </button>
+                                            <button class="btn btn-danger" id="stopRecording" disabled>
+                                                <i class="fas fa-stop"></i> 停止錄音
+                                            </button>
+                                            <button class="btn btn-primary" id="translate">
+                                                <i class="fas fa-language"></i> 翻譯
+                                            </button>
+                                            <button class="btn btn-outline-danger" id="clearInput">
+                                                <i class="fas fa-trash"></i> 清除
+                                            </button>
+                                        </div>
+                                        <span id="recordingStatus" class="badge bg-danger" style="display: none;">
+                                            <i class="fas fa-circle"></i> 錄音中...
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="output-area mt-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="text-muted">翻譯結果</label>
+                                            <button class="btn btn-outline-primary" id="speakButton">
+                                                <i class="fas fa-volume-up"></i> 朗讀
+                                            </button>
+                                        </div>
+                                        <div class="form-control translation-result" id="translationResult">
+                                            <!-- 翻譯結果將在這裡顯示 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
