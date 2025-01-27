@@ -54,10 +54,18 @@ function initSpeechRecognition() {
 function startRecording(side) {
     if (!recognition) return;
     
+    // 如果已經在錄音，而且是同一側，就停止錄音
+    if (isRecording && currentSide === side) {
+        stopRecording();
+        return;
+    }
+    
+    // 如果在錄音但是不同側，先停止當前錄音
     if (isRecording) {
         recognition.stop();
     }
 
+    // 設置新的錄音側
     currentSide = side;
     const sourceLang = side === 'left' ? 
         document.getElementById('leftLanguage').value : 
@@ -71,6 +79,9 @@ function startRecording(side) {
 function stopRecording() {
     if (recognition && isRecording) {
         recognition.stop();
+        isRecording = false;
+        currentSide = null;
+        updateRecordingUI();
     }
 }
 
@@ -137,10 +148,10 @@ function updateRecordingUI() {
     const stopButton = document.getElementById('stopConversation');
     
     if (leftButton && rightButton && stopButton) {
-        leftButton.disabled = isRecording && currentSide !== 'left';
-        rightButton.disabled = isRecording && currentSide !== 'right';
+        // 停止按鈕永遠可用
         stopButton.disabled = false;
         
+        // 更新按鈕樣式
         if (isRecording) {
             if (currentSide === 'left') {
                 leftButton.classList.remove('btn-primary');
