@@ -80,6 +80,12 @@
                                         <i class="fas fa-microphone"></i> 右側發言
                                     </button>
                                 </div>
+                                <div class="form-check form-switch mute-switch">
+                                    <input class="form-check-input" type="checkbox" id="muteModeBidirectional">
+                                    <label class="form-check-label" for="muteModeBidirectional">
+                                        <i class="fas fa-volume-mute"></i>
+                                    </label>
+                                </div>
                             </div>
                             <div class="recording-status text-center">
                                 <span id="leftStatus" class="badge" style="display: none;">
@@ -156,17 +162,11 @@
                                         <textarea class="form-control" id="inputText" rows="3" 
                                             placeholder="在這裡輸入要翻譯的文字，或使用語音輸入..."></textarea>
                                         <div class="btn-group mt-2">
-                                            <button class="btn btn-primary" id="startRecording">
+                                            <button class="btn btn-primary" id="startRecordingSingle">
                                                 <i class="fas fa-microphone"></i> 開始錄音
                                             </button>
-                                            <button class="btn btn-danger" id="stopRecording" disabled>
-                                                <i class="fas fa-stop"></i> 停止錄音
-                                            </button>
-                                            <button class="btn btn-primary" id="translate">
-                                                <i class="fas fa-language"></i> 翻譯
-                                            </button>
-                                            <button class="btn btn-outline-danger" id="clearInput">
-                                                <i class="fas fa-trash"></i> 清除
+                                            <button class="btn btn-danger" id="stopRecordingSingle">
+                                                <i class="fas fa-stop-circle"></i> 停止錄音
                                             </button>
                                         </div>
                                         <span id="recordingStatus" class="badge bg-danger" style="display: none;">

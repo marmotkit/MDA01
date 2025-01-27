@@ -99,32 +99,32 @@ function initSpeechRecognition() {
 }
 
 // 開始錄音
-async function startRecording(side = null) {
-    try {
-        console.log('開始錄音, side:', side);
-        
-        // 如果已經在錄音，先停止當前錄音
-        if (isRecording) {
-            console.log('停止當前錄音');
-            await stopRecording();
-            // 等待一小段時間確保完全停止
-            await new Promise(resolve => setTimeout(resolve, 300));
-        }
-        
-        currentSide = side;
+function startRecording(side = null) {
+    if (!recognition) {
         initSpeechRecognition();
-        updateRecognitionLanguage(side);
-        
-        console.log('啟動語音識別');
-        await recognition.start();
-        isRecording = true;
+    }
+
+    console.log('開始錄音，側邊：', side);
+    
+    try {
+        // 如果是雙向翻譯模式
+        if (side) {
+            currentSide = side;
+            isRecording = true;
+            
+            // 設置語言
+            recognition.lang = side === 'left' ? 
+                document.getElementById('leftLanguage').value : 
+                document.getElementById('rightLanguage').value;
+        } else {
+            // 單向翻譯模式
+            recognition.lang = document.getElementById('sourceLanguage').value;
+        }
+
+        recognition.start();
         updateRecordingUI();
-        console.log('錄音開始成功');
     } catch (error) {
         console.error('開始錄音時出錯:', error);
-        isRecording = false;
-        currentSide = null;
-        updateRecordingUI();
     }
 }
 
@@ -137,6 +137,54 @@ function stopRecording() {
     isRecording = false;
     currentSide = null;
     updateRecordingUI();
+}
+
+// 更新錄音 UI
+function updateRecordingUI() {
+    const leftButton = document.getElementById('speakLeft');
+    const rightButton = document.getElementById('speakRight');
+    const stopButton = document.getElementById('stopConversation');
+    
+    // 雙向翻譯按鈕
+    if (leftButton && rightButton && stopButton) {
+        if (!isRecording) {
+            leftButton.disabled = false;
+            rightButton.disabled = false;
+            stopButton.disabled = true;
+            leftButton.classList.remove('btn-secondary');
+            rightButton.classList.remove('btn-secondary');
+            leftButton.classList.add('btn-primary');
+            rightButton.classList.add('btn-primary');
+        } else {
+            stopButton.disabled = false;
+            
+            if (currentSide === 'left') {
+                leftButton.classList.remove('btn-primary');
+                leftButton.classList.add('btn-secondary');
+                rightButton.classList.add('btn-primary');
+                rightButton.classList.remove('btn-secondary');
+            } else {
+                rightButton.classList.remove('btn-primary');
+                rightButton.classList.add('btn-secondary');
+                leftButton.classList.add('btn-primary');
+                leftButton.classList.remove('btn-secondary');
+            }
+        }
+    }
+
+    // 單向翻譯按鈕
+    const startSingleButton = document.getElementById('startRecordingSingle');
+    const stopSingleButton = document.getElementById('stopRecordingSingle');
+    
+    if (startSingleButton && stopSingleButton) {
+        if (!isRecording) {
+            startSingleButton.disabled = false;
+            stopSingleButton.disabled = true;
+        } else {
+            startSingleButton.disabled = true;
+            stopSingleButton.disabled = false;
+        }
+    }
 }
 
 // 添加聊天氣泡
@@ -193,39 +241,6 @@ function updateRecognitionLanguage(side) {
     
     console.log('設置語音識別語言:', lang);
     recognition.lang = lang;
-}
-
-// 更新錄音 UI
-function updateRecordingUI() {
-    const leftButton = document.getElementById('speakLeft');
-    const rightButton = document.getElementById('speakRight');
-    const stopButton = document.getElementById('stopConversation');
-    
-    if (!isRecording) {
-        leftButton.disabled = false;
-        rightButton.disabled = false;
-        stopButton.disabled = true;
-        leftButton.classList.remove('btn-secondary');
-        rightButton.classList.remove('btn-secondary');
-        leftButton.classList.add('btn-primary');
-        rightButton.classList.add('btn-primary');
-    } else {
-        leftButton.disabled = currentSide !== 'left';
-        rightButton.disabled = currentSide !== 'right';
-        stopButton.disabled = false;
-        
-        if (currentSide === 'left') {
-            leftButton.classList.remove('btn-primary');
-            leftButton.classList.add('btn-secondary');
-            rightButton.classList.add('btn-primary');
-            rightButton.classList.remove('btn-secondary');
-        } else {
-            rightButton.classList.remove('btn-primary');
-            rightButton.classList.add('btn-secondary');
-            leftButton.classList.add('btn-primary');
-            leftButton.classList.remove('btn-secondary');
-        }
-    }
 }
 
 // 互換語言
@@ -334,21 +349,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化語音識別
     initSpeechRecognition();
     
-    // 停止對話按鈕
-    document.getElementById('stopConversation').addEventListener('click', function() {
-        stopRecording();
-    });
+    // 雙向翻譯按鈕
+    const stopConversationBtn = document.getElementById('stopConversation');
+    const speakLeftBtn = document.getElementById('speakLeft');
+    const speakRightBtn = document.getElementById('speakRight');
     
-    // 左側發言按鈕
-    document.getElementById('speakLeft').addEventListener('click', function() {
-        startRecording('left');
-    });
+    if (stopConversationBtn) {
+        stopConversationBtn.addEventListener('click', stopRecording);
+    }
     
-    // 右側發言按鈕
-    document.getElementById('speakRight').addEventListener('click', function() {
-        startRecording('right');
-    });
+    if (speakLeftBtn) {
+        speakLeftBtn.addEventListener('click', () => {
+            if (currentSide === 'left') {
+                stopRecording();
+            } else {
+                startRecording('left');
+            }
+        });
+    }
+    
+    if (speakRightBtn) {
+        speakRightBtn.addEventListener('click', () => {
+            if (currentSide === 'right') {
+                stopRecording();
+            } else {
+                startRecording('right');
+            }
+        });
+    }
 
+    // 單向翻譯按鈕
+    const startSingleBtn = document.getElementById('startRecordingSingle');
+    const stopSingleBtn = document.getElementById('stopRecordingSingle');
+    
+    if (startSingleBtn) {
+        startSingleBtn.addEventListener('click', () => startRecording());
+    }
+    
+    if (stopSingleBtn) {
+        stopSingleBtn.addEventListener('click', stopRecording);
+    }
+    
     // 按鈕事件監聽器
     document.getElementById('startRecording').addEventListener('click', () => startRecording());
     document.getElementById('stopRecording').addEventListener('click', stopRecording);
