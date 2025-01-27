@@ -156,15 +156,55 @@ async function translateAndSpeak(text, side) {
 let synth = window.speechSynthesis;
 let speaking = false;
 
-// 在頁面加載時初始化語音合成
+// 在頁面加載時初始化
 document.addEventListener('DOMContentLoaded', () => {
+    // 初始化語音合成
+    if (!synth) {
+        console.error('瀏覽器不支持語音合成');
+        return;
+    }
+
     // 在 iOS 上預熱語音合成
     if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-        // 創建一個空的語音實例並播放，這樣可以初始化語音引擎
-        const utterance = new SpeechSynthesisUtterance('');
-        synth.speak(utterance);
+        // 預加載語音
+        loadVoices();
+        // 監聽語音加載
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
     }
 });
+
+// 加載語音
+function loadVoices() {
+    return new Promise((resolve) => {
+        let voices = synth.getVoices();
+        if (voices.length > 0) {
+            resolve(voices);
+        } else {
+            synth.onvoiceschanged = () => {
+                voices = synth.getVoices();
+                resolve(voices);
+            };
+        }
+    });
+}
+
+// 獲取指定語言的語音
+function getVoiceForLanguage(lang) {
+    const voices = synth.getVoices();
+    // 嘗試找到完全匹配的語音
+    let voice = voices.find(v => v.lang === lang);
+    if (!voice) {
+        // 如果沒有完全匹配的，嘗試找到語言代碼開頭匹配的
+        voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    }
+    if (!voice) {
+        // 如果還是沒有找到，使用第一個可用的語音
+        voice = voices[0];
+    }
+    return voice;
+}
 
 // 確保語音合成在頁面隱藏時暫停，顯示時恢復
 document.addEventListener('visibilitychange', () => {
@@ -180,86 +220,90 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // 朗讀文字
-function speakText(text, lang) {
-    return new Promise((resolve, reject) => {
-        if (!synth) {
-            console.error('瀏覽器不支持語音合成');
-            reject('瀏覽器不支持語音合成');
-            return;
-        }
+async function speakText(text, lang) {
+    if (!synth) {
+        console.error('瀏覽器不支持語音合成');
+        return;
+    }
 
-        // 取消之前的朗讀
-        synth.cancel();
-        speaking = false;
+    // 取消之前的朗讀
+    synth.cancel();
+    speaking = false;
 
-        // 在 iOS 上，需要先解鎖音頻上下文
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            // 創建一個音頻上下文並播放一個短暫的聲音
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            oscillator.connect(audioContext.destination);
-            oscillator.start();
-            oscillator.stop(0.1);
-        }
+    return new Promise(async (resolve, reject) => {
+        try {
+            // 等待語音加載
+            await loadVoices();
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang;
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
 
-        // 處理各種事件
-        utterance.onstart = () => {
-            speaking = true;
-            console.log('開始朗讀');
-        };
+            // 設置合適的語音
+            utterance.voice = getVoiceForLanguage(lang);
 
-        utterance.onend = () => {
-            speaking = false;
-            console.log('朗讀完成');
-            resolve();
-        };
+            // 處理各種事件
+            utterance.onstart = () => {
+                speaking = true;
+                console.log('開始朗讀:', text);
+            };
 
-        utterance.onerror = (event) => {
-            speaking = false;
-            console.error('朗讀錯誤:', event);
-            reject(event);
-        };
+            utterance.onend = () => {
+                speaking = false;
+                console.log('朗讀完成');
+                resolve();
+            };
 
-        // 在 iOS Safari 上的特殊處理
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            // 確保語音合成已經準備好
-            synth.cancel();
+            utterance.onerror = (event) => {
+                speaking = false;
+                console.error('朗讀錯誤:', event);
+                reject(event);
+            };
 
-            // 使用 setTimeout 來確保語音命令被正確處理
-            setTimeout(() => {
-                try {
-                    // 強制刷新語音狀態
-                    synth.pause();
-                    synth.resume();
+            // 在 iOS Safari 上的特殊處理
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+                // 使用 click 事件來觸發語音合成
+                const speakOnClick = () => {
+                    document.removeEventListener('click', speakOnClick);
                     
                     // 開始朗讀
                     synth.speak(utterance);
 
-                    // 如果 5 秒後還沒有開始朗讀，就重試
+                    // 如果 3 秒後還沒有開始朗讀，就重試
                     setTimeout(() => {
                         if (!speaking) {
                             console.log('重試朗讀');
                             synth.cancel();
                             synth.speak(utterance);
                         }
-                    }, 5000);
-                } catch (error) {
-                    console.error('語音合成錯誤:', error);
-                    reject(error);
+                    }, 3000);
+                };
+
+                // 如果用戶已經點擊過了，直接朗讀
+                if (document.body.classList.contains('user-interacted')) {
+                    speakOnClick();
+                } else {
+                    // 等待用戶點擊
+                    document.addEventListener('click', speakOnClick, { once: true });
+                    console.log('等待用戶點擊以開始朗讀...');
                 }
-            }, 100);
-        } else {
-            // 非 iOS 設備直接朗讀
-            synth.speak(utterance);
+            } else {
+                // 非 iOS 設備直接朗讀
+                synth.speak(utterance);
+            }
+        } catch (error) {
+            console.error('語音合成準備失敗:', error);
+            reject(error);
         }
     });
 }
+
+// 標記用戶已交互
+document.addEventListener('click', () => {
+    document.body.classList.add('user-interacted');
+}, { once: true });
 
 // 清除對話
 function clearChat() {
