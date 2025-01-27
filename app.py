@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from openai import OpenAI
+import openai
 import os
 from dotenv import load_dotenv
 import logging
@@ -41,8 +41,8 @@ def translate():
             app.logger.error('No OpenAI API key found in environment variables')
             return jsonify({"error": "未設置 OpenAI API 金鑰"}), 500
 
-        # 初始化 OpenAI 客戶端
-        client = OpenAI(api_key=api_key)
+        # 設置 OpenAI API 金鑰
+        openai.api_key = api_key
 
         # 獲取目標語言的名稱
         language_names = {
@@ -89,7 +89,7 @@ def translate():
 
         app.logger.info('Sending request to OpenAI')
         try:
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
