@@ -28,33 +28,22 @@ app.logger.info('Translator startup')
 # 載入環境變數
 load_dotenv()
 
-# 檢查 API 金鑰
-api_key = os.getenv('OPENAI_API_KEY')
-if not api_key:
-    app.logger.error('No OpenAI API key found in environment variables')
-    raise RuntimeError('OpenAI API key not found. Please set OPENAI_API_KEY environment variable.')
-
-# 初始化 OpenAI 客戶端
-try:
-    client = OpenAI()  # 使用環境變量中的 API key
-    # 測試 API 連接
-    response = client.models.list()
-    app.logger.info('OpenAI client initialized successfully')
-except Exception as e:
-    app.logger.error(f'Failed to initialize OpenAI client: {str(e)}')
-    client = None
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/translate', methods=['POST'])
 def translate():
-    if not client:
-        app.logger.error('Translation attempted but OpenAI client is not initialized')
-        return jsonify({"error": "翻譯服務未正確初始化，請檢查 API 金鑰設置"}), 500
-
     try:
+        # 檢查 API 金鑰
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            app.logger.error('No OpenAI API key found in environment variables')
+            return jsonify({"error": "未設置 OpenAI API 金鑰"}), 500
+
+        # 初始化 OpenAI 客戶端
+        client = OpenAI(api_key=api_key)
+
         # 獲取目標語言的名稱
         language_names = {
             'zh-TW': '繁體中文',
