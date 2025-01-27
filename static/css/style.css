@@ -32,6 +32,7 @@ body {
     align-items: center;
     gap: 15px;
     margin-bottom: 15px;
+    position: relative;
 }
 
 .language-select-group {
@@ -43,6 +44,23 @@ body {
     color: #a0aec0;
     margin-bottom: 5px;
     display: block;
+}
+
+.mute-switch {
+    position: absolute;
+    right: -50px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.form-check-input {
+    background-color: #2d3748 !important;
+    border-color: #4a5568 !important;
+}
+
+.form-check-input:checked {
+    background-color: #4299e1 !important;
+    border-color: #4299e1 !important;
 }
 
 .form-select {
@@ -68,22 +86,6 @@ body {
 .btn-outline-primary:hover {
     color: #fff !important;
     background-color: #4299e1 !important;
-}
-
-.mute-switch {
-    margin-left: 10px;
-    flex: 0 0 auto;
-    min-width: 50px;
-}
-
-.form-check-input {
-    background-color: #2d3748 !important;
-    border-color: #4a5568 !important;
-}
-
-.form-check-input:checked {
-    background-color: #4299e1 !important;
-    border-color: #4299e1 !important;
 }
 
 .conversation-container {

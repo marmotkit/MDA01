@@ -129,24 +129,14 @@ async function startRecording(side = null) {
 }
 
 // 停止錄音
-async function stopRecording() {
+function stopRecording() {
     console.log('停止錄音');
     if (recognition) {
-        try {
-            isRecording = false;
-            currentSide = null;
-            updateRecordingUI();
-            recognition.stop();
-            // 清理實例
-            recognition.onend = null;
-            recognition.onerror = null;
-            recognition.onresult = null;
-            recognition = null;
-            await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-            console.error('停止錄音時出錯:', error);
-        }
+        recognition.stop();
     }
+    isRecording = false;
+    currentSide = null;
+    updateRecordingUI();
 }
 
 // 添加聊天氣泡
@@ -207,39 +197,33 @@ function updateRecognitionLanguage(side) {
 
 // 更新錄音 UI
 function updateRecordingUI() {
-    const leftButton = document.getElementById('speakLeft');
-    const rightButton = document.getElementById('speakRight');
-    const recordButton = document.getElementById('startRecording');
+    const leftButton = document.getElementById('startLeftRecording');
+    const rightButton = document.getElementById('startRightRecording');
+    const stopButton = document.getElementById('stopConversation');
     
-    // 重置所有按鈕狀態
-    leftButton.classList.remove('recording');
-    rightButton.classList.remove('recording');
-    recordButton.classList.remove('recording');
-    
-    // 更新錄音狀態顯示
-    if (isRecording) {
-        if (currentSide === 'left') {
-            document.getElementById('leftStatus').style.display = 'inline-block';
-            document.getElementById('rightStatus').style.display = 'none';
-            leftButton.classList.add('recording');
-        } else if (currentSide === 'right') {
-            document.getElementById('leftStatus').style.display = 'none';
-            document.getElementById('rightStatus').style.display = 'inline-block';
-            rightButton.classList.add('recording');
-        } else {
-            document.getElementById('recordingStatus').style.display = 'inline-block';
-            recordButton.classList.add('recording');
-            document.getElementById('startRecording').disabled = true;
-            document.getElementById('stopRecording').disabled = false;
-        }
+    if (!isRecording) {
+        leftButton.disabled = false;
+        rightButton.disabled = false;
+        stopButton.disabled = true;
+        leftButton.classList.remove('btn-secondary');
+        rightButton.classList.remove('btn-secondary');
+        leftButton.classList.add('btn-primary');
+        rightButton.classList.add('btn-primary');
     } else {
-        // 停止錄音時隱藏所有狀態指示
-        document.getElementById('leftStatus').style.display = 'none';
-        document.getElementById('rightStatus').style.display = 'none';
-        document.getElementById('recordingStatus').style.display = 'none';
-        if (!currentSide) {
-            document.getElementById('startRecording').disabled = false;
-            document.getElementById('stopRecording').disabled = true;
+        leftButton.disabled = currentSide !== 'left';
+        rightButton.disabled = currentSide !== 'right';
+        stopButton.disabled = false;
+        
+        if (currentSide === 'left') {
+            leftButton.classList.remove('btn-primary');
+            leftButton.classList.add('btn-secondary');
+            rightButton.classList.add('btn-primary');
+            rightButton.classList.remove('btn-secondary');
+        } else {
+            rightButton.classList.remove('btn-primary');
+            rightButton.classList.add('btn-secondary');
+            leftButton.classList.add('btn-primary');
+            leftButton.classList.remove('btn-secondary');
         }
     }
 }
@@ -350,10 +334,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化語音識別
     initSpeechRecognition();
     
+    // 停止對話按鈕
+    document.getElementById('stopConversation').addEventListener('click', function() {
+        stopRecording();
+    });
+    
+    // 左側發言按鈕
+    document.getElementById('startLeftRecording').addEventListener('click', function() {
+        startRecording('left');
+    });
+    
+    // 右側發言按鈕
+    document.getElementById('startRightRecording').addEventListener('click', function() {
+        startRecording('right');
+    });
+
     // 按鈕事件監聽器
-    document.getElementById('speakLeft').addEventListener('click', () => startRecording('left'));
-    document.getElementById('speakRight').addEventListener('click', () => startRecording('right'));
-    document.getElementById('stopConversation').addEventListener('click', stopRecording);
     document.getElementById('startRecording').addEventListener('click', () => startRecording());
     document.getElementById('stopRecording').addEventListener('click', stopRecording);
     
