@@ -32,7 +32,6 @@ body {
     align-items: center;
     gap: 15px;
     margin-bottom: 15px;
-    position: relative;
 }
 
 .language-select-group {
@@ -47,21 +46,31 @@ body {
 }
 
 .conversation-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.control-group {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-group {
+    margin-right: 15px;
 }
 
 .mute-switch {
-    position: absolute;
-    right: -50px;
-    top: 50%;
-    transform: translateY(-50%);
-    margin: 0;
+    margin-left: 10px;
 }
 
 .form-check-input {
     background-color: #2d3748 !important;
     border-color: #4a5568 !important;
+    width: 2.5em;
+    height: 1.25em;
 }
 
 .form-check-input:checked {
@@ -72,21 +81,17 @@ body {
 .form-select {
     background-color: #2d3748 !important;
     color: #e2e8f0 !important;
-    border: 1px solid #4a5568 !important;
-    border-radius: 6px;
-    padding: 8px 12px;
-    width: 100%;
+    border-color: #4a5568 !important;
 }
 
 .form-select:focus {
     border-color: #4299e1 !important;
-    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.25) !important;
+    box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25) !important;
 }
 
 .btn-outline-primary {
     color: #4299e1 !important;
     border-color: #4299e1 !important;
-    background: transparent !important;
 }
 
 .btn-outline-primary:hover {
@@ -97,37 +102,58 @@ body {
 .conversation-container {
     max-height: 400px;
     overflow-y: auto;
+    margin-bottom: 20px;
     padding: 15px;
-    background-color: #1a1e2e;
     border-radius: 8px;
-    border: 1px solid #4a5568;
+    background-color: #1a202c;
 }
 
 .chat-bubble {
-    margin: 10px 0;
-    padding: 10px;
     max-width: 80%;
-    word-wrap: break-word;
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 15px;
+    position: relative;
+    clear: both;
 }
 
 .chat-bubble.left {
-    margin-right: auto;
-    color: #4299e1;
+    float: left;
+    background-color: #2d3748;
+    color: #e2e8f0;
 }
 
 .chat-bubble.right {
-    margin-left: auto;
-    text-align: right;
-    color: #48bb78;
+    float: right;
+    background-color: #4299e1;
+    color: #fff;
 }
 
-.interim-text {
-    font-style: italic;
+.chat-bubble.interim {
     opacity: 0.7;
 }
 
-.btn-group {
-    gap: 10px;
+.recording-status {
+    margin-top: 10px;
+}
+
+.recording-status .badge {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin: 0 5px;
+}
+
+/* 按鈕樣式 */
+.btn {
+    padding: 8px 16px;
+    font-size: 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-lg {
+    padding: 12px 24px;
+    font-size: 1.1rem;
 }
 
 .btn-primary {
@@ -135,35 +161,52 @@ body {
     border-color: #4299e1 !important;
 }
 
+.btn-primary:hover {
+    background-color: #3182ce !important;
+    border-color: #3182ce !important;
+}
+
 .btn-danger {
     background-color: #e53e3e !important;
     border-color: #e53e3e !important;
 }
 
-.btn-success {
-    background-color: #48bb78 !important;
-    border-color: #48bb78 !important;
+.btn-danger:hover {
+    background-color: #c53030 !important;
+    border-color: #c53030 !important;
 }
 
-textarea.form-control {
-    background-color: #2d3748 !important;
-    color: #e2e8f0 !important;
-    border: 1px solid #4a5568 !important;
-    resize: vertical;
+.btn-secondary {
+    background-color: #718096 !important;
+    border-color: #718096 !important;
 }
 
-textarea.form-control:focus {
-    border-color: #4299e1 !important;
-    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.25) !important;
+.btn-secondary:hover {
+    background-color: #4a5568 !important;
+    border-color: #4a5568 !important;
 }
 
-#translationResult {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #2d3748;
-    border: 1px solid #4a5568;
-    border-radius: 8px;
-    min-height: 100px;
+/* 禁用狀態 */
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* 錄音中狀態 */
+.recording {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(66, 153, 225, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(66, 153, 225, 0);
+    }
 }
 
 /* 滾動條樣式 */

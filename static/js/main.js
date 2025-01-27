@@ -5,96 +5,78 @@ let currentSide = null;
 
 // 初始化語音識別
 function initSpeechRecognition() {
-    try {
-        if (!('webkitSpeechRecognition' in window)) {
-            throw new Error('您的瀏覽器不支持語音識別功能');
-        }
+    if (!recognition) {
+        try {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
 
-        recognition = new webkitSpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
+            recognition.onstart = function() {
+                console.log('開始錄音');
+                isRecording = true;
+                updateRecordingUI();
+            };
 
-        recognition.onstart = () => {
-            console.log('語音識別已啟動');
-            isRecording = true;
-            updateRecordingUI();
-        };
+            recognition.onend = function() {
+                console.log('錄音結束');
+                isRecording = false;
+                updateRecordingUI();
+            };
 
-        recognition.onend = () => {
-            console.log('語音識別已停止');
-            isRecording = false;
-            updateRecordingUI();
-            
-            // 如果仍在錄音狀態，則自動重新啟動
-            if (currentSide) {
-                console.log('重新啟動語音識別');
-                recognition.start();
-            }
-        };
+            recognition.onerror = function(event) {
+                console.error('錄音錯誤:', event.error);
+                isRecording = false;
+                updateRecordingUI();
+            };
 
-        recognition.onerror = (event) => {
-            console.error('語音識別錯誤:', event.error);
-            let errorMessage = '語音識別出錯';
-            
-            switch (event.error) {
-                case 'network':
-                    errorMessage = '網絡連接出錯，請檢查您的網絡';
-                    break;
-                case 'not-allowed':
-                    errorMessage = '請允許使用麥克風';
-                    break;
-                case 'no-speech':
-                    errorMessage = '未檢測到語音';
-                    break;
-                case 'aborted':
-                    errorMessage = '語音識別被中斷';
-                    break;
-            }
-            
-            addChatBubble(errorMessage, currentSide);
-        };
+            recognition.onresult = async function(event) {
+                console.log('收到識別結果');
+                let interimTranscript = '';
+                let finalTranscript = '';
 
-        recognition.onresult = async (event) => {
-            try {
-                const result = event.results[event.results.length - 1];
-                const transcript = result[0].transcript;
-                
-                if (result.isFinal) {
-                    console.log('最終識別結果:', transcript);
-                    addChatBubble(transcript, currentSide);
-                    
-                    // 獲取源語言和目標語言
-                    const sourceLang = currentSide === 'left' ? 
-                        document.getElementById('leftLanguage').value :
-                        document.getElementById('rightLanguage').value;
-                    
-                    const targetLang = currentSide === 'left' ? 
-                        document.getElementById('rightLanguage').value :
-                        document.getElementById('leftLanguage').value;
-                    
-                    try {
-                        const translation = await translateText(transcript, sourceLang, targetLang);
-                        addChatBubble(translation, currentSide === 'left' ? 'right' : 'left');
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                        console.log('最終結果:', finalTranscript);
                         
-                        // 朗讀翻譯結果
-                        speakText(translation, targetLang);
-                    } catch (error) {
-                        console.error('翻譯過程錯誤:', error);
-                        addChatBubble(`翻譯錯誤: ${error.message}`, currentSide === 'left' ? 'right' : 'left');
+                        // 添加最終結果到聊天
+                        if (currentSide) {
+                            addChatBubble(finalTranscript, currentSide);
+                            
+                            try {
+                                // 翻譯文本
+                                const translatedText = await translateText(
+                                    finalTranscript,
+                                    currentSide === 'left' ? 'leftLanguage' : 'rightLanguage',
+                                    currentSide === 'left' ? 'rightLanguage' : 'leftLanguage'
+                                );
+                                
+                                // 添加翻譯結果到聊天
+                                addChatBubble(translatedText, currentSide === 'left' ? 'right' : 'left');
+                                
+                                // 如果不是靜音模式，播放翻譯
+                                if (!document.getElementById('muteModeBidirectional').checked) {
+                                    playText(translatedText, currentSide === 'left' ? 'rightLanguage' : 'leftLanguage');
+                                }
+                            } catch (error) {
+                                console.error('翻譯過程錯誤:', error);
+                            }
+                        }
+                    } else {
+                        interimTranscript += transcript;
+                        console.log('臨時結果:', interimTranscript);
+                        
+                        // 更新臨時結果
+                        if (currentSide) {
+                            addChatBubble(interimTranscript, currentSide, true);
+                        }
                     }
-                } else {
-                    // 顯示臨時結果
-                    addChatBubble(transcript, currentSide, true);
                 }
-            } catch (error) {
-                console.error('處理語音識別結果時出錯:', error);
-                addChatBubble('處理語音識別結果時出錯', currentSide);
-            }
-        };
-
-    } catch (error) {
-        console.error('初始化語音識別時出錯:', error);
-        alert(error.message);
+            };
+        } catch (error) {
+            console.error('初始化語音識別時出錯:', error);
+        }
     }
 }
 
@@ -109,22 +91,34 @@ function startRecording(side = null) {
     try {
         // 如果是雙向翻譯模式
         if (side) {
+            // 如果當前正在錄音，先停止
+            if (isRecording) {
+                recognition.stop();
+            }
+            
+            // 設置新的錄音側邊
             currentSide = side;
-            isRecording = true;
             
             // 設置語言
             recognition.lang = side === 'left' ? 
                 document.getElementById('leftLanguage').value : 
                 document.getElementById('rightLanguage').value;
+                
+            // 開始新的錄音
+            setTimeout(() => {
+                recognition.start();
+                updateRecordingUI();
+            }, 100);
         } else {
             // 單向翻譯模式
             recognition.lang = document.getElementById('sourceLanguage').value;
+            recognition.start();
         }
-
-        recognition.start();
-        updateRecordingUI();
     } catch (error) {
         console.error('開始錄音時出錯:', error);
+        isRecording = false;
+        currentSide = null;
+        updateRecordingUI();
     }
 }
 
