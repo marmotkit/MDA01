@@ -54,25 +54,21 @@ function initSpeechRecognition() {
 function startRecording(side) {
     if (!recognition) return;
     
-    // 如果已經在錄音，而且是同一側，就停止錄音
-    if (isRecording && currentSide === side) {
-        stopRecording();
-        return;
-    }
-    
-    // 如果在錄音但是不同側，先停止當前錄音
-    if (isRecording) {
+    // 如果正在錄音但是不同側，先停止當前錄音
+    if (isRecording && currentSide !== side) {
         recognition.stop();
     }
 
-    // 設置新的錄音側
-    currentSide = side;
-    const sourceLang = side === 'left' ? 
-        document.getElementById('leftLanguage').value : 
-        document.getElementById('rightLanguage').value;
+    // 如果沒有在錄音或者切換了側邊，開始新的錄音
+    if (!isRecording || currentSide !== side) {
+        currentSide = side;
+        const sourceLang = side === 'left' ? 
+            document.getElementById('leftLanguage').value : 
+            document.getElementById('rightLanguage').value;
 
-    recognition.lang = sourceLang;
-    recognition.start();
+        recognition.lang = sourceLang;
+        recognition.start();
+    }
 }
 
 // 停止錄音
@@ -148,27 +144,42 @@ function updateRecordingUI() {
     const stopButton = document.getElementById('stopConversation');
     
     if (leftButton && rightButton && stopButton) {
-        // 停止按鈕永遠可用
-        stopButton.disabled = false;
-        
         // 更新按鈕樣式
         if (isRecording) {
+            // 更新錄音側按鈕
             if (currentSide === 'left') {
                 leftButton.classList.remove('btn-primary');
                 leftButton.classList.add('btn-danger');
+                leftButton.innerHTML = '<i class="fas fa-microphone-slash"></i> 停止左側';
                 rightButton.classList.add('btn-primary');
                 rightButton.classList.remove('btn-danger');
+                rightButton.innerHTML = '<i class="fas fa-microphone"></i> 右側發言';
             } else if (currentSide === 'right') {
                 rightButton.classList.remove('btn-primary');
                 rightButton.classList.add('btn-danger');
+                rightButton.innerHTML = '<i class="fas fa-microphone-slash"></i> 停止右側';
                 leftButton.classList.add('btn-primary');
                 leftButton.classList.remove('btn-danger');
+                leftButton.innerHTML = '<i class="fas fa-microphone"></i> 左側發言';
             }
+            
+            // 更新停止按鈕
+            stopButton.classList.remove('btn-danger');
+            stopButton.classList.add('btn-warning');
+            stopButton.innerHTML = '<i class="fas fa-stop-circle fa-pulse"></i> 正在對話';
         } else {
+            // 重置所有按鈕
             leftButton.classList.add('btn-primary');
             leftButton.classList.remove('btn-danger');
+            leftButton.innerHTML = '<i class="fas fa-microphone"></i> 左側發言';
+            
             rightButton.classList.add('btn-primary');
             rightButton.classList.remove('btn-danger');
+            rightButton.innerHTML = '<i class="fas fa-microphone"></i> 右側發言';
+            
+            stopButton.classList.add('btn-danger');
+            stopButton.classList.remove('btn-warning');
+            stopButton.innerHTML = '<i class="fas fa-stop-circle"></i> 停止對話';
         }
     }
 }
