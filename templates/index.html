@@ -54,120 +54,34 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="conversation-controls text-center mb-3">
+                            <div class="conversation-controls">
                                 <div class="control-group">
-                                    <div class="btn-group">
-                                        <button class="btn btn-primary btn-lg" id="speakLeft">
-                                            <i class="fas fa-microphone"></i> 左側發言
-                                        </button>
-                                        <button class="btn btn-danger btn-lg" id="stopConversation">
-                                            <i class="fas fa-stop-circle"></i> 停止對話
-                                        </button>
-                                        <button class="btn btn-primary btn-lg" id="speakRight">
-                                            <i class="fas fa-microphone"></i> 右側發言
-                                        </button>
-                                    </div>
-                                    <div class="form-check form-switch mute-switch">
+                                    <button class="btn btn-primary btn-lg" id="speakLeft">
+                                        <i class="fas fa-microphone"></i> 左側發言
+                                    </button>
+                                    <button class="btn btn-danger btn-lg" id="stopConversation">
+                                        <i class="fas fa-stop-circle"></i> 停止對話
+                                    </button>
+                                    <button class="btn btn-primary btn-lg" id="speakRight">
+                                        <i class="fas fa-microphone"></i> 右側發言
+                                    </button>
+                                </div>
+                                <div class="mute-group">
+                                    <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="muteModeBidirectional">
                                         <label class="form-check-label" for="muteModeBidirectional">
-                                            <i class="fas fa-volume-mute"></i>
+                                            <i class="fas fa-volume-up"></i>
                                         </label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="recording-status text-center">
-                                <span id="leftStatus" class="badge" style="display: none;">
-                                    <i class="fas fa-circle"></i> 左側錄音中...
-                                </span>
-                                <span id="rightStatus" class="badge" style="display: none;">
-                                    <i class="fas fa-circle"></i> 右側錄音中...
-                                </span>
-                            </div>
-                            <div class="chat-container" id="chatContainer">
+                            <div id="chatContainer" class="conversation-container">
                                 <!-- 對話內容將在這裡動態添加 -->
                             </div>
-                            <div class="text-center mt-3">
-                                <button class="btn btn-outline-danger" id="clearChat">
-                                    <i class="fas fa-trash"></i> 清除對話
+                            <div class="text-end">
+                                <button id="clearChat" class="btn btn-outline-danger">
+                                    <i class="fas fa-trash-alt"></i> 清除對話
                                 </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 單向翻譯器 -->
-                <section class="translator-section mb-5">
-                    <h2><i class="fas fa-language"></i> 單向翻譯</h2>
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="translation-section">
-                                <div class="language-controls">
-                                    <div class="language-select-group">
-                                        <label>來源語言</label>
-                                        <select id="sourceLanguage" class="form-select">
-                                            <option value="zh-TW">繁體中文</option>
-                                            <option value="zh-CN">简体中文</option>
-                                            <option value="en-US">English</option>
-                                            <option value="ja-JP">日本語</option>
-                                            <option value="ko-KR">한국어</option>
-                                            <option value="th-TH">ภาษาไทย</option>
-                                            <option value="vi-VN">Tiếng Việt</option>
-                                            <option value="auto">自動檢測</option>
-                                        </select>
-                                    </div>
-                                    <button id="swapUnidirectionalLanguages" class="btn btn-outline-primary">
-                                        <i class="fas fa-exchange-alt"></i>
-                                    </button>
-                                    <div class="language-select-group">
-                                        <label>目標語言</label>
-                                        <select id="targetLanguage" class="form-select">
-                                            <option value="en-US">English</option>
-                                            <option value="zh-TW">繁體中文</option>
-                                            <option value="zh-CN">简体中文</option>
-                                            <option value="ja-JP">日本語</option>
-                                            <option value="ko-KR">한국어</option>
-                                            <option value="th-TH">ภาษาไทย</option>
-                                            <option value="vi-VN">Tiếng Việt</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-check form-switch mute-switch">
-                                        <input class="form-check-input" type="checkbox" id="muteModeUnidirectional">
-                                        <label class="form-check-label" for="muteModeUnidirectional">
-                                            <i class="fas fa-volume-mute"></i>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="translation-controls">
-                                    <div class="input-area">
-                                        <textarea class="form-control" id="inputText" rows="3" 
-                                            placeholder="在這裡輸入要翻譯的文字，或使用語音輸入..."></textarea>
-                                        <div class="translation-buttons mt-2">
-                                            <button class="btn btn-primary" id="startRecordingSingle">
-                                                <i class="fas fa-microphone"></i> 開始錄音
-                                            </button>
-                                            <button class="btn btn-danger" id="stopRecordingSingle" disabled>
-                                                <i class="fas fa-stop-circle"></i> 停止錄音
-                                            </button>
-                                            <div class="form-check form-switch unidirectional-mute">
-                                                <input class="form-check-input" type="checkbox" id="muteModeUnidirectional">
-                                                <label class="form-check-label" for="muteModeUnidirectional">
-                                                    <i class="fas fa-volume-up"></i>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="output-area mt-3">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <label class="text-muted">翻譯結果</label>
-                                            <button class="btn btn-outline-primary" id="speakButton">
-                                                <i class="fas fa-volume-up"></i> 朗讀
-                                            </button>
-                                        </div>
-                                        <div class="form-control translation-result" id="translationResult">
-                                            <!-- 翻譯結果將在這裡顯示 -->
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>

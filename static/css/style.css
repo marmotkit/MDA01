@@ -51,13 +51,16 @@ body {
     align-items: center;
     gap: 20px;
     margin-bottom: 20px;
-    position: relative;
 }
 
 .control-group {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.mute-group {
+    margin-left: 20px;
 }
 
 .btn-group {
@@ -109,6 +112,7 @@ body {
     padding: 15px;
     border-radius: 8px;
     background-color: #1a202c;
+    border: 1px solid #2d3748;
 }
 
 .chat-bubble {
