@@ -4,27 +4,44 @@ import os
 from dotenv import load_dotenv
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 
-# 設置日誌級別為 DEBUG 並輸出到控制台
-app.logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-app.logger.addHandler(handler)
+# 配置日誌
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+file_handler.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setLevel(logging.INFO)
+app.logger.addHandler(stream_handler)
+app.logger.setLevel(logging.INFO)
+app.logger.info('Translator startup')
 
 # 載入環境變數
 load_dotenv()
 
 # 檢查 API 金鑰
 api_key = os.getenv('OPENAI_API_KEY')
-app.logger.info(f"API key loaded: {'Yes' if api_key else 'No'}")
+if not api_key:
+    app.logger.error('No OpenAI API key found')
+else:
+    app.logger.info('OpenAI API key loaded successfully')
 
 def get_openai_client():
     """延遲初始化 OpenAI 客戶端"""
-    return OpenAI(api_key=api_key)
+    try:
+        return OpenAI(api_key=api_key)
+    except Exception as e:
+        app.logger.error(f'Error initializing OpenAI client: {str(e)}')
+        return None
 
 @app.route('/')
 def index():
@@ -34,6 +51,7 @@ def index():
 @app.route('/translate', methods=['POST'])
 def translate():
     if not api_key:
+        app.logger.error('Translation attempted without API key')
         return jsonify({"error": "未設置 OpenAI API 金鑰"}), 500
 
     try:
@@ -49,11 +67,18 @@ def translate():
         }
 
         data = request.get_json()
+        if not data:
+            app.logger.error('No JSON data in request')
+            return jsonify({"error": "無效的請求數據"}), 400
+
         text = data.get('text', '')
         source_lang = data.get('source_lang', 'auto')
         target_lang = data.get('target_lang', 'en-US')
 
+        app.logger.info(f'Translation request - From: {source_lang}, To: {target_lang}')
+
         if not text:
+            app.logger.error('Empty text submitted for translation')
             return jsonify({"error": "請輸入要翻譯的文字"}), 400
 
         source_lang_name = language_names.get(source_lang, source_lang)
@@ -75,6 +100,10 @@ def translate():
 
         # 調用 OpenAI API
         client = get_openai_client()
+        if not client:
+            return jsonify({"error": "無法初始化翻譯服務"}), 500
+
+        app.logger.info('Sending request to OpenAI')
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -84,10 +113,11 @@ def translate():
         )
 
         translation = response.choices[0].message.content.strip()
+        app.logger.info('Translation completed successfully')
         return jsonify({"translation": translation})
 
     except Exception as e:
-        app.logger.error(f"Translation error: {str(e)}")
+        app.logger.error(f'Translation error: {str(e)}')
         return jsonify({"error": f"翻譯過程中發生錯誤：{str(e)}"}), 500
 
 if __name__ == '__main__':

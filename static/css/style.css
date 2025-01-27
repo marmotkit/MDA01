@@ -1,7 +1,179 @@
 body {
-    background-color: #1a1a2e;
-    color: #e6e6e6;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1a1e2e !important;
+    color: #e2e8f0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.card {
+    background-color: #2d3748 !important;
+    border: 1px solid #4a5568 !important;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #2d3748 !important;
+    border-bottom: 1px solid #4a5568 !important;
+    padding: 15px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.language-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.language-select-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.language-select-group label {
+    color: #a0aec0;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.form-select {
+    background-color: #2d3748 !important;
+    color: #e2e8f0 !important;
+    border: 1px solid #4a5568 !important;
+    border-radius: 6px;
+    padding: 8px 12px;
+    width: 100%;
+}
+
+.form-select:focus {
+    border-color: #4299e1 !important;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.25) !important;
+}
+
+.btn-outline-primary {
+    color: #4299e1 !important;
+    border-color: #4299e1 !important;
+    background: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    color: #fff !important;
+    background-color: #4299e1 !important;
+}
+
+.mute-switch {
+    margin-left: 10px;
+    flex: 0 0 auto;
+    min-width: 50px;
+}
+
+.form-check-input {
+    background-color: #2d3748 !important;
+    border-color: #4a5568 !important;
+}
+
+.form-check-input:checked {
+    background-color: #4299e1 !important;
+    border-color: #4299e1 !important;
+}
+
+.conversation-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #1a1e2e;
+    border-radius: 8px;
+    border: 1px solid #4a5568;
+}
+
+.chat-bubble {
+    margin: 10px 0;
+    padding: 10px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.chat-bubble.left {
+    margin-right: auto;
+    color: #4299e1;
+}
+
+.chat-bubble.right {
+    margin-left: auto;
+    text-align: right;
+    color: #48bb78;
+}
+
+.interim-text {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.btn-group {
+    gap: 10px;
+}
+
+.btn-primary {
+    background-color: #4299e1 !important;
+    border-color: #4299e1 !important;
+}
+
+.btn-danger {
+    background-color: #e53e3e !important;
+    border-color: #e53e3e !important;
+}
+
+.btn-success {
+    background-color: #48bb78 !important;
+    border-color: #48bb78 !important;
+}
+
+textarea.form-control {
+    background-color: #2d3748 !important;
+    color: #e2e8f0 !important;
+    border: 1px solid #4a5568 !important;
+    resize: vertical;
+}
+
+textarea.form-control:focus {
+    border-color: #4299e1 !important;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.25) !important;
+}
+
+#translationResult {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #2d3748;
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+    min-height: 100px;
+}
+
+/* 滾動條樣式 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1e2e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4a5568;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #718096;
 }
 
 /* 主要容器樣式 */
