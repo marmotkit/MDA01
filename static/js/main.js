@@ -124,9 +124,31 @@ async function translateAndSpeak(text, side) {
 
 // 朗讀文字
 function speakText(text, lang) {
+    // 檢查瀏覽器是否支持語音合成
+    if (!window.speechSynthesis) {
+        console.error('瀏覽器不支持語音合成');
+        return;
+    }
+
+    // 取消之前的朗讀
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
-    window.speechSynthesis.speak(utterance);
+    
+    // 在 iOS Safari 上的特殊處理
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        // 確保語音合成已經準備好
+        if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
+        }
+        // 等待一小段時間再開始朗讀
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, 100);
+    } else {
+        window.speechSynthesis.speak(utterance);
+    }
 }
 
 // 清除對話
