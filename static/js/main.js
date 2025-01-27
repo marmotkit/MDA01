@@ -8,7 +8,7 @@ function initSpeechRecognition() {
     if (!recognition) {
         try {
             recognition = new webkitSpeechRecognition();
-            recognition.continuous = true;
+            recognition.continuous = false;
             recognition.interimResults = true;
 
             recognition.onstart = function() {
@@ -26,6 +26,7 @@ function initSpeechRecognition() {
             recognition.onerror = function(event) {
                 console.error('錄音錯誤:', event.error);
                 isRecording = false;
+                currentSide = null;
                 updateRecordingUI();
             };
 
@@ -48,8 +49,8 @@ function initSpeechRecognition() {
                                 // 翻譯文本
                                 const translatedText = await translateText(
                                     finalTranscript,
-                                    currentSide === 'left' ? 'leftLanguage' : 'rightLanguage',
-                                    currentSide === 'left' ? 'rightLanguage' : 'leftLanguage'
+                                    document.getElementById(currentSide === 'left' ? 'leftLanguage' : 'rightLanguage').value,
+                                    document.getElementById(currentSide === 'left' ? 'rightLanguage' : 'leftLanguage').value
                                 );
                                 
                                 // 添加翻譯結果到聊天
@@ -57,7 +58,7 @@ function initSpeechRecognition() {
                                 
                                 // 如果不是靜音模式，播放翻譯
                                 if (!document.getElementById('muteModeBidirectional').checked) {
-                                    playText(translatedText, currentSide === 'left' ? 'rightLanguage' : 'leftLanguage');
+                                    speakText(translatedText, document.getElementById(currentSide === 'left' ? 'rightLanguage' : 'leftLanguage').value);
                                 }
                             } catch (error) {
                                 console.error('翻譯過程錯誤:', error);
@@ -89,30 +90,15 @@ function startRecording(side = null) {
     console.log('開始錄音，側邊：', side);
     
     try {
-        // 如果是雙向翻譯模式
-        if (side) {
-            // 如果當前正在錄音，先停止
-            if (isRecording) {
-                recognition.stop();
-            }
-            
-            // 設置新的錄音側邊
-            currentSide = side;
-            
-            // 設置語言
-            recognition.lang = side === 'left' ? 
-                document.getElementById('leftLanguage').value : 
-                document.getElementById('rightLanguage').value;
-                
-            // 開始新的錄音
+        // 如果當前正在錄音，先停止
+        if (isRecording) {
+            stopRecording();
+            // 添加延遲以確保錄音完全停止
             setTimeout(() => {
-                recognition.start();
-                updateRecordingUI();
-            }, 100);
+                startNewRecording(side);
+            }, 200);
         } else {
-            // 單向翻譯模式
-            recognition.lang = document.getElementById('sourceLanguage').value;
-            recognition.start();
+            startNewRecording(side);
         }
     } catch (error) {
         console.error('開始錄音時出錯:', error);
@@ -122,15 +108,36 @@ function startRecording(side = null) {
     }
 }
 
+// 開始新的錄音
+function startNewRecording(side) {
+    currentSide = side;
+    
+    // 設置語言
+    if (side) {
+        recognition.lang = document.getElementById(side === 'left' ? 'leftLanguage' : 'rightLanguage').value;
+    } else {
+        recognition.lang = document.getElementById('sourceLanguage').value;
+    }
+    
+    recognition.start();
+}
+
 // 停止錄音
 function stopRecording() {
     console.log('停止錄音');
-    if (recognition) {
+    if (recognition && isRecording) {
         recognition.stop();
+        isRecording = false;
+        currentSide = null;
+        updateRecordingUI();
     }
-    isRecording = false;
-    currentSide = null;
-    updateRecordingUI();
+}
+
+// 朗讀文字
+function speakText(text, lang) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    window.speechSynthesis.speak(utterance);
 }
 
 // 更新錄音 UI
@@ -321,21 +328,6 @@ async function translateText(text, sourceLang, targetLang) {
         console.error('翻譯錯誤:', error);
         throw error;
     }
-}
-
-// 文本轉語音
-function speakText(text, lang, forceMute = false) {
-    const muteBidirectional = document.getElementById('muteModeBidirectional').checked;
-    const muteUnidirectional = document.getElementById('muteModeUnidirectional').checked;
-    
-    // 如果強制靜音或對應的靜音模式被啟用，則不播放聲音
-    if (forceMute || (currentSide !== null && muteBidirectional) || (currentSide === null && muteUnidirectional)) {
-        return;
-    }
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    speechSynthesis.speak(utterance);
 }
 
 // 事件監聽器設置
