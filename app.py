@@ -18,10 +18,13 @@ app.logger.addHandler(handler)
 # 載入環境變數
 load_dotenv()
 
-# 檢查 API 金鑰並初始化 OpenAI client
+# 檢查 API 金鑰
 api_key = os.getenv('OPENAI_API_KEY')
-client = OpenAI()  # 不需要顯式傳遞 api_key，它會自動從環境變量中讀取
 app.logger.info(f"API key loaded: {'Yes' if api_key else 'No'}")
+
+def get_openai_client():
+    """延遲初始化 OpenAI 客戶端"""
+    return OpenAI(api_key=api_key)
 
 @app.route('/')
 def index():
@@ -71,6 +74,7 @@ def translate():
             3. 使用地道的表達方式"""
 
         # 調用 OpenAI API
+        client = get_openai_client()
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
