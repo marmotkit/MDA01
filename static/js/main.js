@@ -179,8 +179,16 @@ function addChatBubble(text, side) {
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${side}`;
     bubble.textContent = text;
-    chatContainer.appendChild(bubble);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // 將新氣泡添加到頂部
+    if (chatContainer.firstChild) {
+        chatContainer.insertBefore(bubble, chatContainer.firstChild);
+    } else {
+        chatContainer.appendChild(bubble);
+    }
+    
+    // 保持滾動在頂部
+    chatContainer.scrollTop = 0;
 }
 
 // 更新臨時文字
@@ -191,11 +199,17 @@ function updateInterimTranscript(text) {
     if (!interimBubble) {
         interimBubble = document.createElement('div');
         interimBubble.className = `chat-bubble ${currentSide} interim`;
-        chatContainer.appendChild(interimBubble);
+        // 將臨時氣泡添加到頂部
+        if (chatContainer.firstChild) {
+            chatContainer.insertBefore(interimBubble, chatContainer.firstChild);
+        } else {
+            chatContainer.appendChild(interimBubble);
+        }
     }
     
     interimBubble.textContent = text;
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    // 保持滾動在頂部
+    chatContainer.scrollTop = 0;
 }
 
 // 切換雙向翻譯語言
