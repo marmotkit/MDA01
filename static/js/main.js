@@ -125,8 +125,8 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
             },
             body: JSON.stringify({
                 text: text,
-                source_lang: 'auto',
-                target_lang: targetLang
+                source_lang: isTopSection ? targetLang : 'zh-TW',
+                target_lang: isTopSection ? 'zh-TW' : targetLang
             })
         });
 
@@ -155,6 +155,7 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     
                     // 創建新的音頻對象
                     const audio = new Audio(data.audio_url);
+                    audio.volume = 1.0; // 設置最大音量
                     
                     // 停止當前播放的音頻
                     if (currentAudio) {
@@ -256,6 +257,7 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
 
                 // 創建新的音頻對象
                 const newAudio = new Audio(currentAudioUrl);
+                newAudio.volume = 1.0; // 設置最大音量
                 currentAudio = newAudio;
 
                 // 等待音頻加載
