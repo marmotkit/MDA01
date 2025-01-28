@@ -267,11 +267,15 @@ def text_to_speech():
 @app.route('/static/audio/<path:filename>')
 def serve_audio(filename):
     try:
+        file_path = os.path.join('static/audio', filename)
+        file_size = os.path.getsize(file_path)  # 獲取文件大小
+        
         response = send_from_directory('static/audio', filename, mimetype='audio/mpeg')
         # 添加必要的響應頭
         response.headers['Accept-Ranges'] = 'none'  # 禁用範圍請求
         response.headers['Access-Control-Allow-Origin'] = '*'  # 允許跨域
         response.headers['Cache-Control'] = 'no-cache'  # 禁用緩存
+        response.headers['Content-Length'] = str(file_size)  # 設置完整的 Content-Length
         return response
     except Exception as e:
         app.logger.error(f'音頻文件訪問錯誤: {str(e)}')

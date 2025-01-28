@@ -182,7 +182,8 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 創建新的音頻對象
                     const audio = new Audio();
                     audio.preload = 'auto';
-                    audio.volume = 1.0;
+                    audio.volume = 0;  // 初始設置為靜音
+                    audio.muted = true;  // 設置靜音屬性
                     currentAudio = audio;
 
                     // 設置音頻源
@@ -197,11 +198,32 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
 
                     console.log('音頻完全加載完成，開始播放');
                     
-                    // 嘗試播放
+                    // 先嘗試靜音播放
                     try {
                         await audio.play();
-                        console.log('音頻開始播放');
-                        updatePlayButtonState(listenerSection, '播放中...', true);
+                        console.log('靜音播放成功，準備取消靜音');
+                        
+                        // 等待用戶交互後取消靜音
+                        const unmuteAudio = async () => {
+                            try {
+                                audio.muted = false;
+                                audio.volume = 1.0;
+                                console.log('音頻已取消靜音');
+                                updatePlayButtonState(listenerSection, '播放中...', true);
+                                
+                                // 移除事件監聽器
+                                document.removeEventListener('click', unmuteAudio);
+                                document.removeEventListener('touchstart', unmuteAudio);
+                                document.removeEventListener('keydown', unmuteAudio);
+                            } catch (error) {
+                                console.error('取消靜音失敗:', error);
+                            }
+                        };
+
+                        // 添加用戶交互事件監聽
+                        document.addEventListener('click', unmuteAudio, { once: true });
+                        document.addEventListener('touchstart', unmuteAudio, { once: true });
+                        document.addEventListener('keydown', unmuteAudio, { once: true });
 
                         // 監聽播放結束事件
                         audio.addEventListener('ended', () => {
@@ -296,7 +318,8 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 // 創建新的音頻對象
                 const audio = new Audio();
                 audio.preload = 'auto';
-                audio.volume = 1.0;
+                audio.volume = 0;  // 初始設置為靜音
+                audio.muted = true;  // 設置靜音屬性
                 audio.src = audioUrl;
                 currentAudio = audio;
 
