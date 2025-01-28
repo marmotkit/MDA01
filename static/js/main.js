@@ -3,6 +3,7 @@ let recognition = null;
 let isRecording = false;
 let audioContext = null;
 let currentAudio = null;
+let currentAudioUrl = null;
 
 // 初始化語音識別
 function initSpeechRecognition(targetLang) {
@@ -35,9 +36,10 @@ function handleRecognitionResult(event) {
     }
 
     if (finalTranscript) {
-        const activeSection = document.querySelector('.recording');
-        const targetLang = activeSection.closest('.split-section').querySelector('.language-select').value;
-        translateAndSpeak(finalTranscript, targetLang);
+        const activeSection = document.querySelector('.btn-record.recording').closest('.split-section');
+        const targetLang = activeSection.querySelector('.language-select').value;
+        const isTopSection = activeSection.classList.contains('top-section');
+        translateAndSpeak(finalTranscript, targetLang, isTopSection);
     }
 }
 
@@ -77,7 +79,7 @@ function startRecording(button) {
     button.classList.add('recording');
     button.innerHTML = `
         <span class="status-indicator active"></span>
-        停止對話
+        ${section.classList.contains('top-section') ? 'Stop' : '停止對話'}
     `;
     
     recognition.start();
@@ -95,14 +97,15 @@ function stopRecording(button) {
     
     isRecording = false;
     button.classList.remove('recording');
+    const isTopSection = button.closest('.split-section').classList.contains('top-section');
     button.innerHTML = `
         <span class="status-indicator"></span>
-        開始對話
+        ${isTopSection ? 'Start Speaking' : '開始對話'}
     `;
 }
 
 // 翻譯並播放
-async function translateAndSpeak(text, targetLang) {
+async function translateAndSpeak(text, targetLang, isTopSection) {
     try {
         const response = await fetch('/translate', {
             method: 'POST',
@@ -121,20 +124,24 @@ async function translateAndSpeak(text, targetLang) {
 
         const data = await response.json();
         
-        // 添加原文和翻譯到聊天容器
-        addChatBubble(text, 'left', false);
-        const translatedBubble = addChatBubble(data.translated_text, 'right', true);
+        // 根據說話者的位置決定顯示在哪個容器
+        const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
+        const listenerSection = isTopSection ? '.bottom-section' : '.top-section';
+        
+        // 在說話者的容器中顯示原文
+        addChatBubble(text, 'right', false, speakerSection);
+        // 在聽者的容器中顯示翻譯
+        addChatBubble(data.translated_text, 'left', true, listenerSection);
 
         // 自動播放翻譯後的音頻
         if (data.audio_url) {
             currentAudioUrl = data.audio_url;
+            // 確保音頻上下文已初始化
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            await audioContext.resume();
             await playAudio(data.audio_url);
-            
-            // 更新播放按鈕狀態
-            document.querySelectorAll('.btn-play').forEach(button => {
-                button.textContent = '重新播放';
-                button.disabled = false;
-            });
         }
     } catch (error) {
         console.error('翻譯錯誤:', error);
@@ -142,9 +149,8 @@ async function translateAndSpeak(text, targetLang) {
 }
 
 // 添加聊天氣泡
-function addChatBubble(text, position, isTranslated) {
-    const container = document.querySelector('.split-section:not(.top-section) .chat-container');
-    const topContainer = document.querySelector('.top-section .chat-container');
+function addChatBubble(text, position, isTranslated, sectionSelector) {
+    const container = document.querySelector(`${sectionSelector} .chat-container`);
     
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${position}`;
@@ -160,14 +166,6 @@ function addChatBubble(text, position, isTranslated) {
     }
 
     container.insertBefore(bubble, container.firstChild);
-    
-    // 為上半部分創建鏡像氣泡
-    const mirrorBubble = bubble.cloneNode(true);
-    if (isTranslated && mirrorBubble.querySelector('.btn-play')) {
-        mirrorBubble.querySelector('.btn-play').onclick = () => playAudio(currentAudioUrl);
-    }
-    topContainer.insertBefore(mirrorBubble, topContainer.firstChild);
-    
     return bubble;
 }
 
@@ -177,6 +175,7 @@ async function playAudio(audioUrl) {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
+        await audioContext.resume();
 
         if (currentAudio) {
             currentAudio.stop();
@@ -219,11 +218,12 @@ async function playAudio(audioUrl) {
 
 // 初始化頁面
 document.addEventListener('DOMContentLoaded', () => {
-    // 初始化音頻上下文
-    document.addEventListener('click', () => {
+    // 初始化音頻上下文並解除暫停狀態
+    document.addEventListener('click', async () => {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
+        await audioContext.resume();
     }, { once: true });
 
     // 綁定錄音按鈕事件
