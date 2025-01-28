@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
-from gtts import gTTS
+import azure.cognitiveservices.speech as speechsdk
 import tempfile
 
 app = Flask(__name__)
@@ -120,19 +120,59 @@ def text_to_speech():
 
         # 創建臨時文件
         temp_dir = tempfile.gettempdir()
-        temp_file = os.path.join(temp_dir, 'speech.mp3')
+        temp_file = os.path.join(temp_dir, 'speech.wav')
 
-        # 生成語音文件
-        tts = gTTS(text=text, lang=lang)
-        tts.save(temp_file)
-
-        # 返回音頻文件
-        return send_file(
-            temp_file,
-            mimetype='audio/mpeg',
-            as_attachment=True,
-            download_name='speech.mp3'
+        # 設置 Azure 語音配置
+        speech_config = speechsdk.SpeechConfig(
+            subscription=os.getenv('AZURE_SPEECH_KEY'),
+            region=os.getenv('AZURE_SPEECH_REGION')
         )
+
+        # 設置音頻輸出配置
+        audio_config = speechsdk.audio.AudioOutputConfig(filename=temp_file)
+
+        # 根據語言選擇合適的語音
+        voice_name = {
+            'zh': 'zh-CN-XiaoxiaoNeural',
+            'en': 'en-US-JennyNeural',
+            'ja': 'ja-JP-NanamiNeural',
+            'ko': 'ko-KR-SunHiNeural',
+            'fr': 'fr-FR-DeniseNeural',
+            'de': 'de-DE-KatjaNeural',
+            'es': 'es-ES-ElviraNeural',
+            'it': 'it-IT-ElsaNeural',
+            'ru': 'ru-RU-SvetlanaNeural',
+            'pt': 'pt-BR-FranciscaNeural',
+            'ar': 'ar-SA-ZariyahNeural',
+            'hi': 'hi-IN-SwaraNeural',
+            'th': 'th-TH-PremwadeeNeural',
+            'vi': 'vi-VN-HoaiMyNeural',
+            'id': 'id-ID-GadisNeural',
+            'ms': 'ms-MY-YasminNeural'
+        }.get(lang.split('-')[0], 'en-US-JennyNeural')
+
+        speech_config.speech_synthesis_voice_name = voice_name
+
+        # 創建語音合成器
+        synthesizer = speechsdk.SpeechSynthesizer(
+            speech_config=speech_config, 
+            audio_config=audio_config
+        )
+
+        # 合成語音
+        result = synthesizer.speak_text_async(text).get()
+
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            # 返回音頻文件
+            return send_file(
+                temp_file,
+                mimetype='audio/wav',
+                as_attachment=True,
+                download_name='speech.wav'
+            )
+        else:
+            return jsonify({'error': '語音合成失敗'}), 500
+
     except Exception as e:
         print(f"TTS error: {str(e)}")
         return jsonify({'error': str(e)}), 500
