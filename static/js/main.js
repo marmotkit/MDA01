@@ -558,3 +558,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, { once: true });
 });
+
+// 翻譯並朗讀文字
+async function translateAndSpeak(text, side) {
+    try {
+        const sourceLang = side === 'left' ? getLeftLanguage() : getRightLanguage();
+        const targetLang = side === 'left' ? getRightLanguage() : getLeftLanguage();
+
+        console.log('開始翻譯:', { text, sourceLang, targetLang });
+
+        const response = await fetch('/translate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: text,
+                source_lang: sourceLang,
+                target_lang: targetLang
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('翻譯請求失敗');
+        }
+
+        const data = await response.json();
+        
+        if (data.translation) {
+            console.log('翻譯完成:', data.translation);
+            
+            // 添加翻譯結果到對話框，並標記為翻譯內容
+            const translationBubble = addChatBubble(data.translation, side === 'left' ? 'right' : 'left', true);
+            
+            // 檢查是否處於靜音模式
+            const muteMode = document.getElementById('muteModeBidirectional').checked;
+            if (!muteMode) {
+                try {
+                    // 創建並添加播放按鈕
+                    const playButton = createPlayButton(data.translation, targetLang);
+                    translationBubble.appendChild(playButton);
+                } catch (error) {
+                    console.error('音頻處理錯誤:', error);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('翻譯錯誤:', error);
+        alert('翻譯過程中發生錯誤');
+    }
+}
