@@ -160,13 +160,18 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 確保播放按鈕存在
                     updatePlayButtonState(listenerSection, '重新播放', false);
                     
-                    // 獲取播放按鈕並自動觸發點擊事件
-                    const section = document.querySelector(listenerSection);
-                    const playButton = section.querySelector('.btn-play');
-                    if (playButton) {
-                        console.log('自動觸發播放按鈕');
-                        playButton.click();
-                    }
+                    // 使用 setTimeout 確保按鈕已經完全創建和初始化
+                    setTimeout(() => {
+                        const section = document.querySelector(listenerSection);
+                        const playButton = section.querySelector('.btn-play');
+                        if (playButton) {
+                            console.log('自動觸發播放按鈕');
+                            // 直接調用點擊事件處理函數
+                            playButton.onclick();
+                        } else {
+                            console.error('找不到播放按鈕');
+                        }
+                    }, 100);
 
                 } catch (error) {
                     console.error('音頻播放準備失敗:', error);
