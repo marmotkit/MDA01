@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, Response, url_for
+from flask import Flask, render_template, request, jsonify, send_file, Response, url_for, send_from_directory
 import openai
 import os
 from dotenv import load_dotenv
@@ -263,6 +263,19 @@ def text_to_speech():
         error_message = f"TTS error: {str(e)}"
         print(error_message)
         return jsonify({'error': error_message}), 500
+
+@app.route('/static/audio/<path:filename>')
+def serve_audio(filename):
+    try:
+        response = send_from_directory('static/audio', filename, mimetype='audio/mpeg')
+        # 添加必要的響應頭
+        response.headers['Accept-Ranges'] = 'none'  # 禁用範圍請求
+        response.headers['Access-Control-Allow-Origin'] = '*'  # 允許跨域
+        response.headers['Cache-Control'] = 'no-cache'  # 禁用緩存
+        return response
+    except Exception as e:
+        app.logger.error(f'音頻文件訪問錯誤: {str(e)}')
+        return str(e), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)

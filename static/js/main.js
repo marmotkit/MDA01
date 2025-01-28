@@ -170,7 +170,12 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     }
 
                     // 使用 fetch 先完整下載音頻文件
-                    const response = await fetch(data.audio_url);
+                    const response = await fetch(data.audio_url, {
+                        headers: {
+                            'Range': 'bytes=0-',  // 請求完整文件
+                            'Cache-Control': 'no-cache'  // 禁用緩存
+                        }
+                    });
                     const audioBlob = await response.blob();
                     const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -279,7 +284,12 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 }
 
                 // 使用 fetch 先完整下載音頻文件
-                const response = await fetch(currentAudioUrl);
+                const response = await fetch(currentAudioUrl, {
+                    headers: {
+                        'Range': 'bytes=0-',  // 請求完整文件
+                        'Cache-Control': 'no-cache'  // 禁用緩存
+                    }
+                });
                 const audioBlob = await response.blob();
                 const audioUrl = URL.createObjectURL(audioBlob);
 
