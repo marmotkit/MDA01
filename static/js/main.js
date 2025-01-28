@@ -271,7 +271,7 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
     const section = document.querySelector(sectionSelector);
     const controlPanel = section.querySelector('.control-panel');
     let buttonContainer = controlPanel.querySelector('.play-button-container');
-    let playButton, muteButton;
+    let playButton;
 
     if (!buttonContainer) {
         buttonContainer = document.createElement('div');
@@ -281,15 +281,8 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
         playButton = document.createElement('button');
         playButton.className = 'btn btn-play';
         
-        // 創建靜音按鈕
-        muteButton = document.createElement('button');
-        muteButton.className = 'btn btn-mute';
-        muteButton.textContent = '🔇';  // 使用表情符號表示靜音狀態
-        muteButton.style.marginLeft = '5px';
-        
         // 添加按鈕到容器
         buttonContainer.appendChild(playButton);
-        buttonContainer.appendChild(muteButton);
         
         // 將按鈕容器插入到語言選擇器之後
         const languageSelect = controlPanel.querySelector('.language-select');
@@ -301,17 +294,6 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
         } else {
             bottomSectionPlayButton = playButton;
         }
-
-        // 設置靜音按鈕點擊事件
-        muteButton.onclick = () => {
-            if (currentAudio) {
-                currentAudio.muted = !currentAudio.muted;
-                muteButton.textContent = currentAudio.muted ? '🔇' : '🔊';
-                if (!currentAudio.muted) {
-                    currentAudio.volume = 1.0;
-                }
-            }
-        };
 
         // 設置播放按鈕點擊事件
         playButton.onclick = async () => {
@@ -343,8 +325,7 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 // 創建新的音頻對象
                 const audio = new Audio();
                 audio.preload = 'auto';
-                audio.volume = isMuted ? 0 : 1.0;
-                audio.muted = isMuted;
+                audio.volume = 1.0;
                 audio.src = audioUrl;
                 currentAudio = audio;
 
@@ -357,14 +338,8 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
 
                 // 播放音頻
                 await audio.play();
-                console.log('音頻開始播放（靜音狀態）');
+                console.log('音頻開始播放');
                 updatePlayButtonState(sectionSelector, '播放中...', true);
-                
-                // 更新靜音按鈕狀態
-                const muteBtn = buttonContainer.querySelector('.btn-mute');
-                if (muteBtn) {
-                    muteBtn.textContent = '🔇';
-                }
 
                 // 監聽播放結束事件
                 audio.addEventListener('ended', () => {
@@ -382,7 +357,6 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
         };
     } else {
         playButton = buttonContainer.querySelector('.btn-play');
-        muteButton = buttonContainer.querySelector('.btn-mute');
     }
 
     if (playButton) {

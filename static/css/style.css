@@ -306,18 +306,11 @@ select {
 }
 
 .mute-switch input[type="checkbox"] {
-    appearance: none;
-    width: 40px;
-    height: 20px;
-    background: #ddd;
-    border-radius: 20px;
-    position: relative;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
+    display: none;
 }
 
-.mute-switch input[type="checkbox"]:checked {
-    background: var(--primary-color);
+.btn-mute {
+    display: none;
 }
 
 .mute-switch input[type="checkbox"]::before {
