@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, Response
 import openai
 import os
 from dotenv import load_dotenv
@@ -173,20 +173,16 @@ def text_to_speech():
         
         if response.status_code == 200:
             print("Request successful")
-            # 創建臨時文件
-            temp_dir = tempfile.gettempdir()
-            temp_file = os.path.join(temp_dir, 'speech.mp3')
+            print(f"Response content length: {len(response.content)} bytes")
             
-            # 保存音頻
-            with open(temp_file, 'wb') as f:
-                f.write(response.content)
-
-            # 返回音頻
-            return send_file(
-                temp_file,
+            # 直接返回音頻數據
+            return Response(
+                response.content,
                 mimetype='audio/mpeg',
-                as_attachment=True,
-                download_name='speech.mp3'
+                headers={
+                    'Content-Disposition': 'attachment; filename=speech.mp3',
+                    'Content-Length': str(len(response.content))
+                }
             )
         else:
             error_message = f"TTS API error: {response.status_code} - {response.text}"
