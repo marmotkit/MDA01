@@ -12,6 +12,9 @@ let bottomSectionPlayButton = null;
 // 添加全局變量來追踪自動播放狀態
 let autoplayEnabled = false;
 
+// 添加全局變量
+let isMuted = true;  // 默認靜音
+
 // 初始化語音識別
 function initSpeechRecognition(targetLang) {
     if (recognition) {
@@ -182,8 +185,8 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 創建新的音頻對象
                     const audio = new Audio();
                     audio.preload = 'auto';
-                    audio.volume = 0;  // 初始設置為靜音
-                    audio.muted = true;  // 設置靜音屬性
+                    audio.volume = isMuted ? 0 : 1.0;
+                    audio.muted = isMuted;
                     currentAudio = audio;
 
                     // 設置音頻源
@@ -340,8 +343,8 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 // 創建新的音頻對象
                 const audio = new Audio();
                 audio.preload = 'auto';
-                audio.volume = 1.0;
-                audio.muted = true;  // 默認靜音
+                audio.volume = isMuted ? 0 : 1.0;
+                audio.muted = isMuted;
                 audio.src = audioUrl;
                 currentAudio = audio;
 
@@ -462,24 +465,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // 修改音頻播放邏輯
 async function playAudio(audio, listenerSection) {
     try {
-        if (!autoplayEnabled) {
-            // 嘗試播放一個靜音的音頻來解除限制
-            const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-            try {
-                await silentAudio.play();
-                autoplayEnabled = true;
-                console.log('成功解除自動播放限制');
-            } catch (error) {
-                console.warn('無法解除自動播放限制:', error);
-            }
-        }
+        // 設置初始靜音狀態
+        audio.muted = isMuted;
+        audio.volume = isMuted ? 0 : 1.0;
 
         await audio.play();
-        console.log('音頻開始播放');
+        console.log('音頻開始播放，靜音狀態:', isMuted);
         updatePlayButtonState(listenerSection, '播放中...', true);
     } catch (error) {
         console.error('音頻播放失敗:', error);
         updatePlayButtonState(listenerSection, '重新播放', false);
         currentAudio = null;
+    }
+}
+
+// 切換靜音狀態
+function toggleMute() {
+    isMuted = !isMuted;
+    // 更新所有靜音按鈕的顯示
+    document.querySelectorAll('.btn-mute').forEach(btn => {
+        btn.textContent = isMuted ? '🔇' : '🔊';
+    });
+    
+    // 如果當前有音頻在播放，更新其靜音狀態
+    if (currentAudio) {
+        currentAudio.muted = isMuted;
+        currentAudio.volume = isMuted ? 0 : 1.0;
     }
 }
