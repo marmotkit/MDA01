@@ -131,17 +131,34 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         // 在說話者的容器中顯示原文
         addChatBubble(text, 'right', false, speakerSection);
         // 在聽者的容器中顯示翻譯
-        addChatBubble(data.translated_text, 'left', true, listenerSection);
+        const translatedBubble = addChatBubble(data.translated_text, 'left', true, listenerSection);
 
         // 自動播放翻譯後的音頻
         if (data.audio_url) {
-            currentAudioUrl = data.audio_url;
-            // 確保音頻上下文已初始化
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            try {
+                // 確保音頻上下文已初始化
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                await audioContext.resume();
+
+                // 更新播放按鈕狀態為播放中
+                document.querySelectorAll('.btn-play').forEach(button => {
+                    button.textContent = '播放中...';
+                    button.disabled = true;
+                });
+
+                // 播放音頻
+                currentAudioUrl = data.audio_url;
+                await playAudio(data.audio_url);
+            } catch (error) {
+                console.error('音頻播放錯誤:', error);
+                // 更新播放按鈕狀態為重新播放
+                document.querySelectorAll('.btn-play').forEach(button => {
+                    button.textContent = '重新播放';
+                    button.disabled = false;
+                });
             }
-            await audioContext.resume();
-            await playAudio(data.audio_url);
         }
     } catch (error) {
         console.error('翻譯錯誤:', error);
@@ -159,8 +176,8 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
     if (isTranslated) {
         const playButton = document.createElement('button');
         playButton.className = 'btn btn-play';
-        playButton.textContent = '準備播放...';
-        playButton.disabled = true;
+        playButton.textContent = '播放中...';  // 直接設置為播放中狀態
+        playButton.disabled = true;  // 初始時禁用按鈕
         playButton.onclick = () => playAudio(currentAudioUrl);
         bubble.appendChild(playButton);
     }
@@ -199,20 +216,15 @@ async function playAudio(audioUrl) {
             });
         };
         
+        // 開始播放
         currentAudio.start(0);
-        
-        // 更新所有播放按鈕狀態
-        document.querySelectorAll('.btn-play').forEach(button => {
-            button.textContent = '播放中...';
-            button.disabled = true;
-        });
-        
     } catch (error) {
         console.error('音頻播放錯誤:', error);
         document.querySelectorAll('.btn-play').forEach(button => {
             button.textContent = '重新播放';
             button.disabled = false;
         });
+        throw error;  // 將錯誤向上傳遞
     }
 }
 
