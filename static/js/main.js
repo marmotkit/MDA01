@@ -5,10 +5,12 @@ let currentSide = null;
 
 // 初始化語音識別
 function initSpeechRecognition() {
-    // 檢測是否為 iOS 設備
+    // 檢測是否為 iOS 設備且使用 Safari 瀏覽器
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isIOSSafari = isIOS && isSafari;
     
-    if ('webkitSpeechRecognition' in window && !isIOS) {
+    if ('webkitSpeechRecognition' in window && !isIOSSafari) {
         recognition = new webkitSpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -68,9 +70,9 @@ function initSpeechRecognition() {
                 console.error('無法獲得麥克風權限:', err);
                 alert('請允許使用麥克風以啟用語音功能');
             });
-    } else if (isIOS) {
-        // iOS 設備特殊處理
-        console.log('iOS 設備檢測：語音輸入功能受限');
+    } else if (isIOSSafari) {
+        // iOS Safari 特殊處理
+        console.log('iOS Safari 檢測：語音輸入功能受限');
         // 禁用語音輸入按鈕
         const leftMicButton = document.querySelector('.mic-button.left');
         const rightMicButton = document.querySelector('.mic-button.right');
@@ -81,7 +83,7 @@ function initSpeechRecognition() {
         const warningDiv = document.createElement('div');
         warningDiv.className = 'ios-warning';
         warningDiv.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px; border-radius: 5px; text-align: center;';
-        warningDiv.innerHTML = '注意：由於 iOS 系統限制，語音輸入功能在此設備上不可用。請使用文字輸入。';
+        warningDiv.innerHTML = '注意：由於 iOS Safari 瀏覽器限制，語音輸入功能在此設備上不可用。請使用文字輸入。';
         document.body.insertBefore(warningDiv, document.body.firstChild);
     } else {
         console.log('瀏覽器不支持語音識別功能');
@@ -199,9 +201,6 @@ async function speakText(text, lang) {
             })
         });
 
-        console.log('TTS 響應狀態:', response.status);
-        console.log('TTS 響應頭:', response.headers);
-
         if (!response.ok) {
             throw new Error(`TTS 請求失敗: ${response.status}`);
         }
@@ -220,7 +219,7 @@ async function speakText(text, lang) {
         // 創建新的音頻元素
         audioPlayer = new Audio();
         
-        // 設置事件處理
+        // 設置音頻事件處理
         audioPlayer.onloadedmetadata = () => {
             console.log('音頻元數據加載完成，時長:', audioPlayer.duration);
         };
@@ -249,40 +248,61 @@ async function speakText(text, lang) {
         // 設置音頻源
         audioPlayer.src = url;
         
-        // 在 iOS 上，需要用戶交互才能播放
+        // iOS Safari 特殊處理
         if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            console.log('檢測到 iOS 設備');
+            console.log('檢測到 iOS 設備，使用特殊播放邏輯');
             
-            const playAudio = async () => {
-                try {
-                    // 預加載音頻
-                    await audioPlayer.load();
-                    console.log('音頻已加載');
+            // 預加載音頻
+            await audioPlayer.load();
+            
+            // 嘗試播放
+            try {
+                // 使用 Promise 包裝播放操作
+                await new Promise((resolve, reject) => {
+                    // 設置超時檢查
+                    const timeoutId = setTimeout(() => {
+                        reject(new Error('播放超時'));
+                    }, 3000);
+
+                    // 監聽播放開始事件
+                    const playStarted = () => {
+                        clearTimeout(timeoutId);
+                        resolve();
+                    };
+
+                    audioPlayer.addEventListener('playing', playStarted, { once: true });
                     
-                    // 播放音頻
+                    // 嘗試播放
                     const playPromise = audioPlayer.play();
                     if (playPromise !== undefined) {
-                        await playPromise;
-                        console.log('音頻開始播放');
+                        playPromise.catch(error => {
+                            clearTimeout(timeoutId);
+                            console.error('播放失敗，等待用戶交互:', error);
+                            
+                            // 創建播放按鈕
+                            const playButton = document.createElement('button');
+                            playButton.className = 'btn btn-primary mt-2';
+                            playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+                            playButton.onclick = async () => {
+                                try {
+                                    await audioPlayer.play();
+                                    playButton.remove();
+                                } catch (err) {
+                                    console.error('手動播放失敗:', err);
+                                }
+                            };
+                            
+                            // 將按鈕添加到最新的聊天氣泡旁
+                            const chatBubbles = document.getElementsByClassName('chat-bubble');
+                            if (chatBubbles.length > 0) {
+                                const latestBubble = chatBubbles[0];
+                                latestBubble.appendChild(playButton);
+                            }
+                        });
                     }
-                } catch (error) {
-                    console.error('播放失敗:', error);
-                }
-            };
-
-            // 如果用戶已經交互過，直接播放
-            if (document.body.classList.contains('user-interacted')) {
-                console.log('用戶已交互，嘗試直接播放');
-                await playAudio();
-            } else {
-                // 等待用戶點擊
-                console.log('等待用戶交互...');
-                const clickHandler = async () => {
-                    document.body.classList.add('user-interacted');
-                    document.removeEventListener('click', clickHandler);
-                    await playAudio();
-                };
-                document.addEventListener('click', clickHandler);
+                });
+            } catch (error) {
+                console.error('iOS 播放失敗:', error);
             }
         } else {
             // 非 iOS 設備直接播放
