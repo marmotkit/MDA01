@@ -156,16 +156,27 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                 try {
                     console.log('準備播放翻譯音頻:', data.audio_url);
                     
-                    // 創建新的音頻對象並設置屬性
-                    const audio = new Audio();
-                    audio.src = data.audio_url;
-                    audio.volume = 1.0;
-                    
                     // 停止當前播放的音頻
                     if (currentAudio) {
                         currentAudio.pause();
                         currentAudio.currentTime = 0;
                     }
+
+                    // 創建新的音頻對象並設置屬性
+                    const audio = new Audio();
+                    
+                    // 設置音頻加載事件
+                    await new Promise((resolve, reject) => {
+                        audio.addEventListener('canplaythrough', resolve, { once: true });
+                        audio.addEventListener('error', reject, { once: true });
+                        
+                        // 設置音頻屬性
+                        audio.src = data.audio_url;
+                        audio.volume = 1.0;
+                        
+                        // 開始加載音頻
+                        audio.load();
+                    });
                     
                     // 更新當前音頻
                     currentAudio = audio;
@@ -174,28 +185,10 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 更新按鈕狀態
                     updatePlayButtonState(listenerSection, '播放中...', true);
 
-                    // 直接嘗試播放
-                    try {
-                        await audio.play();
-                        console.log('音頻開始播放');
-                    } catch (error) {
-                        console.error('直接播放失敗，嘗試加載後播放:', error);
-                        
-                        // 如果直接播放失敗，等待加載後再播放
-                        audio.addEventListener('canplaythrough', async () => {
-                            try {
-                                await audio.play();
-                                console.log('音頻加載後開始播放');
-                            } catch (playError) {
-                                console.error('加載後播放仍然失敗:', playError);
-                                updatePlayButtonState(listenerSection, '重新播放', false);
-                            }
-                        }, { once: true });
-
-                        // 開始加載
-                        audio.load();
-                    }
-
+                    // 播放音頻
+                    console.log('音頻加載完成，開始播放');
+                    await audio.play();
+                    
                     // 監聽播放結束事件
                     audio.addEventListener('ended', () => {
                         console.log('音頻播放結束');
@@ -267,31 +260,26 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 }
 
                 // 創建新的音頻對象
-                const newAudio = new Audio(currentAudioUrl);
-                newAudio.volume = 1.0; // 設置最大音量
-                currentAudio = newAudio;
-
-                // 等待音頻加載
+                const newAudio = new Audio();
+                
+                // 設置音頻加載事件
                 await new Promise((resolve, reject) => {
-                    const loadHandler = () => {
-                        console.log('音頻加載完成');
-                        resolve();
-                    };
-                    const errorHandler = (error) => {
-                        console.error('音頻加載失敗:', error);
-                        reject(error);
-                    };
+                    newAudio.addEventListener('canplaythrough', resolve, { once: true });
+                    newAudio.addEventListener('error', reject, { once: true });
                     
-                    newAudio.addEventListener('canplaythrough', loadHandler, { once: true });
-                    newAudio.addEventListener('error', errorHandler, { once: true });
+                    // 設置音頻屬性
+                    newAudio.src = currentAudioUrl;
+                    newAudio.volume = 1.0;
                     
-                    // 開始加載
+                    // 開始加載音頻
                     newAudio.load();
                 });
 
+                currentAudio = newAudio;
+
                 // 播放音頻
+                console.log('音頻加載完成，開始播放');
                 await newAudio.play();
-                console.log('音頻開始播放');
 
                 // 監聽播放結束事件
                 newAudio.addEventListener('ended', () => {
