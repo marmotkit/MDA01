@@ -9,6 +9,9 @@ let currentAudioUrl = null;
 let topSectionPlayButton = null;
 let bottomSectionPlayButton = null;
 
+// 添加全局變量來追踪自動播放狀態
+let autoplayEnabled = false;
+
 // 初始化語音識別
 function initSpeechRecognition(targetLang) {
     if (recognition) {
@@ -176,8 +179,7 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     audio.addEventListener('loadeddata', async () => {
                         try {
                             console.log('音頻加載完成，開始播放');
-                            await audio.play();
-                            updatePlayButtonState(listenerSection, '播放中...', true);
+                            await playAudio(audio, listenerSection);
                         } catch (error) {
                             console.error('音頻播放失敗:', error);
                             updatePlayButtonState(listenerSection, '重新播放', false);
@@ -327,14 +329,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 await audioContext.resume();
             }
             console.log('音頻上下文已初始化並解除暫停，狀態:', audioContext.state);
+
+            // 創建一個靜音的音頻並播放，以解除自動播放限制
+            const silentAudio = new Audio();
+            silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+            try {
+                await silentAudio.play();
+                console.log('成功解除自動播放限制');
+            } catch (error) {
+                console.warn('無法解除自動播放限制:', error);
+            }
         } catch (error) {
             console.error('音頻上下文初始化失敗:', error);
         }
     };
 
-    // 在用戶首次點擊時初始化音頻
-    document.addEventListener('click', initAudioContext, { once: true });
-    document.addEventListener('touchstart', initAudioContext, { once: true });
+    // 在用戶首次點擊或觸摸時初始化音頻
+    const initOnUserInteraction = async (event) => {
+        await initAudioContext();
+        // 移除所有事件監聽器
+        document.removeEventListener('click', initOnUserInteraction);
+        document.removeEventListener('touchstart', initOnUserInteraction);
+        document.removeEventListener('keydown', initOnUserInteraction);
+    };
+
+    // 添加多種用戶交互事件監聽
+    document.addEventListener('click', initOnUserInteraction);
+    document.addEventListener('touchstart', initOnUserInteraction);
+    document.addEventListener('keydown', initOnUserInteraction);
 
     // 綁定錄音按鈕事件
     document.querySelectorAll('.btn-record').forEach(button => {
@@ -351,3 +373,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// 修改音頻播放邏輯
+async function playAudio(audio, listenerSection) {
+    try {
+        if (!autoplayEnabled) {
+            // 嘗試播放一個靜音的音頻來解除限制
+            const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+            try {
+                await silentAudio.play();
+                autoplayEnabled = true;
+                console.log('成功解除自動播放限制');
+            } catch (error) {
+                console.warn('無法解除自動播放限制:', error);
+            }
+        }
+
+        await audio.play();
+        console.log('音頻開始播放');
+        updatePlayButtonState(listenerSection, '播放中...', true);
+    } catch (error) {
+        console.error('音頻播放失敗:', error);
+        updatePlayButtonState(listenerSection, '重新播放', false);
+        currentAudio = null;
+    }
+}
