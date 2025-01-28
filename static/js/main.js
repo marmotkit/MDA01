@@ -12,7 +12,7 @@ function initSpeechRecognition(targetLang) {
     }
 
     recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false;  // 改為單次識別
     recognition.interimResults = true;
     recognition.lang = targetLang;
 
@@ -39,6 +39,14 @@ function handleRecognitionResult(event) {
         const activeSection = document.querySelector('.btn-record.recording').closest('.split-section');
         const targetLang = activeSection.querySelector('.language-select').value;
         const isTopSection = activeSection.classList.contains('top-section');
+        
+        // 在自己的聊天框顯示原文
+        addChatBubble(finalTranscript, 'right', false, isTopSection ? '.top-section' : '.bottom-section');
+        
+        // 自動停止錄音
+        stopRecording();
+        
+        // 進行翻譯並在對方聊天框顯示
         translateAndSpeak(finalTranscript, targetLang, isTopSection);
     }
 }
@@ -51,9 +59,8 @@ function handleRecognitionError(event) {
 
 // 處理語音識別結束
 function handleRecognitionEnd() {
-    if (isRecording) {
-        recognition.start();
-    }
+    // 不再自動重新開始錄音
+    stopRecording();
 }
 
 // 開始錄音
@@ -91,6 +98,8 @@ function stopRecording(button) {
         button = document.querySelector('.btn-record.recording');
     }
     
+    if (!button) return;
+    
     if (recognition) {
         recognition.stop();
     }
@@ -124,44 +133,47 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
 
         const data = await response.json();
         
-        // 根據說話者的位置決定顯示在哪個容器
-        const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
+        // 在對方的聊天框顯示翻譯
         const listenerSection = isTopSection ? '.bottom-section' : '.top-section';
-        
-        // 在說話者的容器中顯示原文
-        addChatBubble(text, 'right', false, speakerSection);
-        // 在聽者的容器中顯示翻譯
         const translatedBubble = addChatBubble(data.translated_text, 'left', true, listenerSection);
 
-        // 自動播放翻譯後的音頻
+        // 播放翻譯後的音頻
         if (data.audio_url) {
-            try {
-                // 確保音頻上下文已初始化
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                await audioContext.resume();
+            // 初始化音頻上下文（如果需要）
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // 獲取音頻數據
+            const audioResponse = await fetch(data.audio_url);
+            const arrayBuffer = await audioResponse.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-                // 更新播放按鈕狀態為播放中
-                document.querySelectorAll('.btn-play').forEach(button => {
-                    button.textContent = '播放中...';
-                    button.disabled = true;
-                });
+            // 創建音頻源
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
 
-                // 播放音頻
-                currentAudioUrl = data.audio_url;
-                await playAudio(data.audio_url);
-            } catch (error) {
-                console.error('音頻播放錯誤:', error);
-                // 更新播放按鈕狀態為重新播放
+            // 播放完成後更新按鈕狀態
+            source.onended = () => {
                 document.querySelectorAll('.btn-play').forEach(button => {
                     button.textContent = '重新播放';
                     button.disabled = false;
                 });
-            }
+            };
+
+            // 開始播放
+            await audioContext.resume();
+            source.start(0);
+            currentAudio = source;
+            currentAudioUrl = data.audio_url;
         }
     } catch (error) {
-        console.error('翻譯錯誤:', error);
+        console.error('翻譯或播放錯誤:', error);
+        document.querySelectorAll('.btn-play').forEach(button => {
+            button.textContent = '重新播放';
+            button.disabled = false;
+        });
     }
 }
 
@@ -176,9 +188,19 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
     if (isTranslated) {
         const playButton = document.createElement('button');
         playButton.className = 'btn btn-play';
-        playButton.textContent = '播放中...';  // 直接設置為播放中狀態
-        playButton.disabled = true;  // 初始時禁用按鈕
-        playButton.onclick = () => playAudio(currentAudioUrl);
+        playButton.textContent = '播放中...';
+        playButton.disabled = true;
+        playButton.onclick = async () => {
+            try {
+                playButton.textContent = '播放中...';
+                playButton.disabled = true;
+                await playAudio(currentAudioUrl);
+            } catch (error) {
+                console.error('重新播放失敗:', error);
+                playButton.textContent = '重新播放';
+                playButton.disabled = false;
+            }
+        };
         bubble.appendChild(playButton);
     }
 
@@ -188,6 +210,10 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
 
 // 播放音頻
 async function playAudio(audioUrl) {
+    if (!audioUrl) {
+        throw new Error('無效的音頻 URL');
+    }
+
     try {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -203,12 +229,11 @@ async function playAudio(audioUrl) {
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-        currentAudio = audioContext.createBufferSource();
-        currentAudio.buffer = audioBuffer;
-        currentAudio.connect(audioContext.destination);
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
         
-        // 添加結束事件監聽器
-        currentAudio.onended = () => {
+        source.onended = () => {
             currentAudio = null;
             document.querySelectorAll('.btn-play').forEach(button => {
                 button.textContent = '重新播放';
@@ -216,26 +241,27 @@ async function playAudio(audioUrl) {
             });
         };
         
-        // 開始播放
-        currentAudio.start(0);
+        source.start(0);
+        currentAudio = source;
     } catch (error) {
         console.error('音頻播放錯誤:', error);
-        document.querySelectorAll('.btn-play').forEach(button => {
-            button.textContent = '重新播放';
-            button.disabled = false;
-        });
-        throw error;  // 將錯誤向上傳遞
+        throw error;
     }
 }
 
 // 初始化頁面
 document.addEventListener('DOMContentLoaded', () => {
-    // 初始化音頻上下文並解除暫停狀態
+    // 初始化音頻上下文
     document.addEventListener('click', async () => {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            await audioContext.resume();
+            console.log('音頻上下文已初始化並解除暫停');
+        } catch (error) {
+            console.error('音頻上下文初始化失敗:', error);
         }
-        await audioContext.resume();
     }, { once: true });
 
     // 綁定錄音按鈕事件
