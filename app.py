@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, Response
+from flask import Flask, render_template, request, jsonify, send_file, Response, url_for
 import openai
 import os
 from dotenv import load_dotenv
@@ -8,6 +8,8 @@ from logging.handlers import RotatingFileHandler
 import requests
 import xml.etree.ElementTree as ET
 import tempfile
+import time
+import hashlib
 
 app = Flask(__name__)
 
@@ -102,7 +104,73 @@ def translate():
 
             translation = response.choices[0].message.content.strip()
             app.logger.info('Translation completed successfully')
-            return jsonify({"translation": translation})
+
+            # 生成音頻
+            try:
+                # 根據目標語言選擇合適的語音
+                voice_name = {
+                    'zh-TW': 'zh-CN-XiaoxiaoNeural',
+                    'zh-CN': 'zh-CN-XiaoxiaoNeural',
+                    'en-US': 'en-US-JennyNeural',
+                    'ja-JP': 'ja-JP-NanamiNeural',
+                    'ko-KR': 'ko-KR-SunHiNeural',
+                    'th-TH': 'th-TH-PremwadeeNeural',
+                    'vi-VN': 'vi-VN-HoaiMyNeural'
+                }.get(target_lang, 'en-US-JennyNeural')
+
+                # 準備 SSML
+                ssml = f"""<?xml version="1.0" encoding="UTF-8"?>
+                <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{target_lang}">
+                    <voice name="{voice_name}">
+                        {translation}
+                    </voice>
+                </speak>"""
+
+                # Azure TTS endpoint
+                endpoint = f"https://{os.getenv('AZURE_SPEECH_REGION')}.tts.speech.microsoft.com/cognitiveservices/v1"
+                
+                # 設置請求頭
+                headers = {
+                    'Ocp-Apim-Subscription-Key': os.getenv('AZURE_SPEECH_KEY'),
+                    'Content-Type': 'application/ssml+xml',
+                    'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3'
+                }
+
+                # 發送請求
+                tts_response = requests.post(endpoint, headers=headers, data=ssml.encode('utf-8'))
+                
+                if tts_response.status_code == 200:
+                    # 生成臨時文件名
+                    file_hash = hashlib.md5(translation.encode()).hexdigest()[:8]
+                    temp_filename = f"temp_{file_hash}_{int(time.time())}.mp3"
+                    temp_path = os.path.join('static', 'audio', temp_filename)
+                    
+                    # 確保目錄存在
+                    os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+                    
+                    # 保存音頻文件
+                    with open(temp_path, 'wb') as f:
+                        f.write(tts_response.content)
+                    
+                    # 返回翻譯結果和音頻 URL
+                    audio_url = url_for('static', filename=f'audio/{temp_filename}')
+                    return jsonify({
+                        "translated_text": translation,
+                        "audio_url": audio_url
+                    })
+                else:
+                    app.logger.error(f'TTS API error: {tts_response.status_code} - {tts_response.text}')
+                    return jsonify({
+                        "translated_text": translation,
+                        "error": "無法生成音頻"
+                    })
+
+            except Exception as e:
+                app.logger.error(f'TTS error: {str(e)}')
+                return jsonify({
+                    "translated_text": translation,
+                    "error": "音頻生成失敗"
+                })
 
         except Exception as e:
             app.logger.error(f'OpenAI API error: {str(e)}')
