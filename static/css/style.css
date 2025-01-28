@@ -71,6 +71,7 @@ body {
     gap: 10px;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
 }
 
 /* 按鈕基本樣式 */
@@ -147,20 +148,7 @@ select {
 
 /* 播放按鈕容器樣式 */
 .play-button-container {
-    position: absolute;
-    left: 20px;
-    bottom: 20px;
-    background: white;
-    padding: 10px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-}
-
-.top-section .play-button-container {
-    transform: rotate(180deg);
-    top: 20px;
-    bottom: auto;
+    margin: 0 10px;
 }
 
 /* 播放按鈕樣式 */
@@ -215,23 +203,17 @@ select {
 @media (max-width: 768px) {
     .control-panel {
         flex-direction: column;
-    }
-    
-    .btn, select {
-        width: 100%;
+        align-items: stretch;
     }
     
     .play-button-container {
-        left: 15px;
-        bottom: 15px;
-    }
-    
-    .top-section .play-button-container {
-        top: 15px;
+        margin: 5px 0;
+        width: 100%;
     }
     
     .btn-play {
-        min-width: 90px;
+        width: 100%;
+        min-width: unset;
         padding: 8px 16px;
         font-size: 0.8rem;
     }
