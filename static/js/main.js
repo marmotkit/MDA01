@@ -123,10 +123,19 @@ async function translateAndSpeak(text, targetLang) {
         
         // 添加原文和翻譯到聊天容器
         addChatBubble(text, 'left', false);
-        addChatBubble(data.translated_text, 'right', true);
+        const translatedBubble = addChatBubble(data.translated_text, 'right', true);
 
-        // 播放翻譯後的音頻
-        playAudio(data.audio_url);
+        // 自動播放翻譯後的音頻
+        if (data.audio_url) {
+            currentAudioUrl = data.audio_url;
+            await playAudio(data.audio_url);
+            
+            // 更新播放按鈕狀態
+            document.querySelectorAll('.btn-play').forEach(button => {
+                button.textContent = '重新播放';
+                button.disabled = false;
+            });
+        }
     } catch (error) {
         console.error('翻譯錯誤:', error);
     }
@@ -144,7 +153,8 @@ function addChatBubble(text, position, isTranslated) {
     if (isTranslated) {
         const playButton = document.createElement('button');
         playButton.className = 'btn btn-play';
-        playButton.textContent = '重新播放';
+        playButton.textContent = '準備播放...';
+        playButton.disabled = true;
         playButton.onclick = () => playAudio(currentAudioUrl);
         bubble.appendChild(playButton);
     }
@@ -157,6 +167,8 @@ function addChatBubble(text, position, isTranslated) {
         mirrorBubble.querySelector('.btn-play').onclick = () => playAudio(currentAudioUrl);
     }
     topContainer.insertBefore(mirrorBubble, topContainer.firstChild);
+    
+    return bubble;
 }
 
 // 播放音頻
@@ -167,7 +179,8 @@ async function playAudio(audioUrl) {
         }
 
         if (currentAudio) {
-            currentAudio.pause();
+            currentAudio.stop();
+            currentAudio = null;
         }
 
         const response = await fetch(audioUrl);
@@ -177,10 +190,30 @@ async function playAudio(audioUrl) {
         currentAudio = audioContext.createBufferSource();
         currentAudio.buffer = audioBuffer;
         currentAudio.connect(audioContext.destination);
+        
+        // 添加結束事件監聽器
+        currentAudio.onended = () => {
+            currentAudio = null;
+            document.querySelectorAll('.btn-play').forEach(button => {
+                button.textContent = '重新播放';
+                button.disabled = false;
+            });
+        };
+        
         currentAudio.start(0);
-        currentAudioUrl = audioUrl;
+        
+        // 更新所有播放按鈕狀態
+        document.querySelectorAll('.btn-play').forEach(button => {
+            button.textContent = '播放中...';
+            button.disabled = true;
+        });
+        
     } catch (error) {
         console.error('音頻播放錯誤:', error);
+        document.querySelectorAll('.btn-play').forEach(button => {
+            button.textContent = '重新播放';
+            button.disabled = false;
+        });
     }
 }
 

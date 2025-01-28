@@ -48,7 +48,7 @@ body {
 }
 
 /* 聊天容器樣式 */
-#chatContainer {
+.chat-container {
     background: white;
     border-radius: 15px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
