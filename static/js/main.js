@@ -214,76 +214,39 @@ function stopRecording() {
     }
 }
 
-// 翻譯並朗讀文字
-async function translateAndSpeak(text, side) {
-    try {
-        const sourceLang = side === 'left' ? getLeftLanguage() : getRightLanguage();
-        const targetLang = side === 'left' ? getRightLanguage() : getLeftLanguage();
-
-        const response = await fetch('/translate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                text: text,
-                source_lang: sourceLang,
-                target_lang: targetLang
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('翻譯請求失敗');
-        }
-
-        const data = await response.json();
-        
-        if (data.translation) {
-            // 添加翻譯結果到對話框，並標記為翻譯內容
-            const translationBubble = addChatBubble(data.translation, side === 'left' ? 'right' : 'left', true);
-            
-            // 檢查是否處於靜音模式
-            const muteMode = document.getElementById('muteModeBidirectional').checked;
-            if (!muteMode) {
-                try {
-                    // 先創建播放按鈕
-                    const playButton = createPlayButton(data.translation, targetLang, translationBubble);
-                    translationBubble.appendChild(playButton);
-                    
-                    // 自動觸發播放
-                    playButton.click();
-                } catch (error) {
-                    console.error('音頻處理錯誤:', error);
-                }
-            }
-        }
-    } catch (error) {
-        console.error('翻譯錯誤:', error);
-        alert('翻譯過程中發生錯誤');
-    }
-}
-
 // 創建播放按鈕
 function createPlayButton(text, lang, container) {
     const playButton = document.createElement('button');
     playButton.className = 'btn btn-primary mt-2';
-    playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+    playButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備播放...';
     
-    playButton.onclick = async () => {
+    let hasPlayed = false;
+    
+    const playAudio = async () => {
         try {
             playButton.disabled = true;
             playButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 播放中...';
             
             await speakText(text, lang);
             
+            hasPlayed = true;
             playButton.disabled = false;
             playButton.innerHTML = '<i class="fas fa-play"></i> 重新播放';
         } catch (err) {
             console.error('播放失敗:', err);
             playButton.disabled = false;
-            playButton.innerHTML = '<i class="fas fa-play"></i> 重試播放';
+            playButton.innerHTML = '<i class="fas fa-play"></i> 重新播放';
         }
     };
+    
+    playButton.onclick = playAudio;
+    
+    // 自動播放
+    setTimeout(() => {
+        if (!hasPlayed) {
+            playAudio();
+        }
+    }, 100);
     
     return playButton;
 }
@@ -332,12 +295,14 @@ async function speakText(text, lang) {
 
         // 使用 Web Audio API 播放音頻
         const context = initAudioContext();
+        await context.resume();
+        
         const source = context.createMediaElementSource(audio);
         source.connect(context.destination);
         
         // 播放音頻
-        await context.resume();
         await audio.play();
+        console.log('音頻開始播放');
         
         // 等待播放完成
         await new Promise((resolve, reject) => {
@@ -369,7 +334,7 @@ async function speakText(text, lang) {
                 startRecording(currentSide);
             }, 300);
         }
-        throw error; // 將錯誤往上拋出，以便按鈕處理
+        throw error;
     }
 }
 
