@@ -2,19 +2,28 @@
 let recognition = null;
 let isRecording = false;
 let currentSide = null;
+let audioContext = null;
+let audioQueue = [];
+let isProcessingAudio = false;
+
+// 初始化音頻上下文
+function initAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
 
 // 初始化語音識別
 function initSpeechRecognition() {
     if ('webkitSpeechRecognition' in window) {
         try {
             recognition = new webkitSpeechRecognition();
-            recognition.continuous = true;
+            recognition.continuous = false;  // 改為單次識別模式
             recognition.interimResults = true;
 
             recognition.onstart = () => {
                 isRecording = true;
                 updateRecordingUI();
-                // 移除警告訊息（如果存在）
                 const warningDiv = document.querySelector('.speech-warning');
                 if (warningDiv) {
                     warningDiv.remove();
@@ -27,19 +36,19 @@ function initSpeechRecognition() {
                 isRecording = false;
                 updateRecordingUI();
                 
-                // 如果當前有指定側別，則重新開始錄音
-                if (currentSide) {
-                    console.log('嘗試重新開始錄音');
+                // 只有在當前側別存在且沒有正在處理音頻時才重新開始錄音
+                if (currentSide && !isProcessingAudio) {
+                    console.log('準備重新開始錄音');
                     setTimeout(() => {
                         try {
                             recognition.start();
                             console.log('成功重新開始錄音');
                         } catch (error) {
                             console.error('重新開始錄音失敗:', error);
-                            currentSide = null; // 重置當前側
+                            currentSide = null;
                             updateRecordingUI();
                         }
-                    }, 300);
+                    }, 100);
                 }
             };
 
@@ -145,40 +154,39 @@ function showSpeechWarning(message) {
 function startRecording(side) {
     if (!recognition) return;
     
+    // 初始化音頻上下文（需要用戶交互）
+    initAudioContext();
+    
     console.log('開始錄音，側別:', side);
+    
+    // 如果正在處理音頻，不要開始新的錄音
+    if (isProcessingAudio) {
+        console.log('正在處理音頻，暫時不開始新的錄音');
+        return;
+    }
+    
+    // 如果當前正在錄音，且側別不同，則先停止當前錄音
+    if (isRecording && currentSide !== side) {
+        recognition.stop();
+    }
+    
     currentSide = side;
     
-    // 如果正在錄音，先停止
-    if (isRecording) {
-        recognition.stop();
-        // 等待一下再重新開始
-        setTimeout(() => {
-            try {
-                const sourceLang = side === 'left' ? 
-                    document.getElementById('leftLanguage').value : 
-                    document.getElementById('rightLanguage').value;
-                recognition.lang = sourceLang;
-                recognition.start();
-                console.log('重新開始錄音');
-            } catch (error) {
-                console.error('開始錄音失敗:', error);
-                currentSide = null;
-                updateRecordingUI();
-            }
-        }, 300);
-    } else {
-        try {
-            const sourceLang = side === 'left' ? 
-                document.getElementById('leftLanguage').value : 
-                document.getElementById('rightLanguage').value;
-            recognition.lang = sourceLang;
+    // 設置語言並開始錄音
+    try {
+        const sourceLang = side === 'left' ? 
+            document.getElementById('leftLanguage').value : 
+            document.getElementById('rightLanguage').value;
+        recognition.lang = sourceLang;
+        
+        if (!isRecording) {
             recognition.start();
             console.log('開始新的錄音');
-        } catch (error) {
-            console.error('開始錄音失敗:', error);
-            currentSide = null;
-            updateRecordingUI();
         }
+    } catch (error) {
+        console.error('開始錄音失敗:', error);
+        currentSide = null;
+        updateRecordingUI();
     }
 }
 
@@ -186,7 +194,7 @@ function startRecording(side) {
 function stopRecording() {
     console.log('停止錄音');
     if (recognition && isRecording) {
-        currentSide = null; // 重要：先清除 currentSide
+        currentSide = null;
         recognition.stop();
         isRecording = false;
         updateRecordingUI();
@@ -244,22 +252,17 @@ async function translateAndSpeak(text, side) {
     }
 }
 
-// 初始化語音播放器
-let audioPlayer = new Audio();
-let speaking = false;
-
 // 朗讀文字
 async function speakText(text, lang) {
     try {
         console.log('開始 TTS 請求:', { text, lang });
+        isProcessingAudio = true;
         
         // 暫時停止錄音
-        const tempSide = currentSide;
         if (isRecording) {
             recognition.stop();
         }
 
-        // 發送 TTS 請求
         const response = await fetch('/tts', {
             method: 'POST',
             headers: {
@@ -281,65 +284,67 @@ async function speakText(text, lang) {
         }
 
         const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
         
-        // 創建新的音頻元素
-        audioPlayer = new Audio(url);
+        // 使用 Web Audio API 播放音頻
+        const audioSource = audioContext.createMediaElementSource(audio);
+        audioSource.connect(audioContext.destination);
         
-        // 確保音頻加載完成
-        await new Promise((resolve) => {
-            audioPlayer.addEventListener('canplaythrough', resolve, { once: true });
-            audioPlayer.load();
-        });
-
-        // 播放完成後的處理
-        audioPlayer.onended = () => {
-            URL.revokeObjectURL(url);
-            speaking = false;
-            // 恢復錄音
-            if (tempSide) {
-                setTimeout(() => startRecording(tempSide), 300);
-            }
-        };
-
-        // 嘗試播放
-        try {
-            document.body.classList.add('user-interacted'); // 標記用戶已交互
-            await audioPlayer.play();
-            speaking = true;
-        } catch (error) {
-            console.error('自動播放失敗，提供播放按鈕:', error);
-            
-            const playButton = document.createElement('button');
-            playButton.className = 'btn btn-primary mt-2';
-            playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
-            
-            playButton.onclick = async () => {
-                try {
-                    await audioPlayer.play();
-                    speaking = true;
-                    playButton.remove();
-                } catch (err) {
-                    console.error('手動播放失敗:', err);
+        return new Promise((resolve, reject) => {
+            audio.onended = () => {
+                URL.revokeObjectURL(url);
+                isProcessingAudio = false;
+                // 音頻播放完成後，如果有指定側別，則恢復錄音
+                if (currentSide) {
+                    setTimeout(() => startRecording(currentSide), 100);
                 }
+                resolve();
             };
-            
-            const chatBubbles = document.getElementsByClassName('chat-bubble');
-            if (chatBubbles.length > 0) {
-                chatBubbles[0].appendChild(playButton);
-            }
-            
-            // 即使播放失敗也恢復錄音
-            if (tempSide) {
-                setTimeout(() => startRecording(tempSide), 300);
-            }
-        }
+
+            audio.onerror = (error) => {
+                console.error('音頻播放錯誤:', error);
+                URL.revokeObjectURL(url);
+                isProcessingAudio = false;
+                if (currentSide) {
+                    setTimeout(() => startRecording(currentSide), 100);
+                }
+                reject(error);
+            };
+
+            // 嘗試自動播放
+            audio.play().catch((error) => {
+                console.error('自動播放失敗:', error);
+                // 如果自動播放失敗，添加播放按鈕
+                const playButton = document.createElement('button');
+                playButton.className = 'btn btn-primary mt-2';
+                playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+                
+                playButton.onclick = async () => {
+                    try {
+                        // 恢復音頻上下文
+                        if (audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        await audio.play();
+                        playButton.remove();
+                    } catch (err) {
+                        console.error('手動播放失敗:', err);
+                    }
+                };
+                
+                const chatBubbles = document.getElementsByClassName('chat-bubble');
+                if (chatBubbles.length > 0) {
+                    chatBubbles[chatBubbles.length - 1].appendChild(playButton);
+                }
+            });
+        });
     } catch (error) {
         console.error('TTS 處理錯誤:', error);
-        speaking = false;
-        // 發生錯誤時恢復錄音
+        isProcessingAudio = false;
         if (currentSide) {
-            setTimeout(() => startRecording(currentSide), 300);
+            setTimeout(() => startRecording(currentSide), 100);
         }
+        throw error;
     }
 }
 
@@ -543,3 +548,14 @@ function getLeftLanguage() {
 function getRightLanguage() {
     return document.getElementById('rightLanguage').value;
 }
+
+// 在頁面加載時初始化音頻上下文
+document.addEventListener('DOMContentLoaded', () => {
+    // 添加用戶交互事件監聽
+    document.body.addEventListener('click', () => {
+        initAudioContext();
+        if (audioContext && audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+    }, { once: true });
+});
