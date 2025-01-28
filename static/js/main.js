@@ -159,6 +159,8 @@ let speaking = false;
 // 朗讀文字
 async function speakText(text, lang) {
     try {
+        console.log('開始 TTS 請求:', { text, lang });
+        
         // 取消當前播放
         if (speaking) {
             audioPlayer.pause();
@@ -166,6 +168,7 @@ async function speakText(text, lang) {
         }
 
         // 發送 TTS 請求
+        console.log('發送 TTS 請求...');
         const response = await fetch('/tts', {
             method: 'POST',
             headers: {
@@ -177,63 +180,98 @@ async function speakText(text, lang) {
             })
         });
 
+        console.log('TTS 響應狀態:', response.status);
+        console.log('TTS 響應頭:', response.headers);
+
         if (!response.ok) {
-            throw new Error('TTS 請求失敗');
+            throw new Error(`TTS 請求失敗: ${response.status}`);
         }
 
         // 獲取音頻 blob
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        console.log('收到音頻數據，大小:', blob.size, '字節');
+        
+        if (blob.size === 0) {
+            throw new Error('收到空的音頻數據');
+        }
 
-        // 設置音頻
-        audioPlayer.src = url;
+        const url = URL.createObjectURL(blob);
+        console.log('創建的音頻 URL:', url);
+
+        // 創建新的音頻元素
+        audioPlayer = new Audio();
         
         // 設置事件處理
+        audioPlayer.onloadedmetadata = () => {
+            console.log('音頻元數據加載完成，時長:', audioPlayer.duration);
+        };
+
+        audioPlayer.oncanplay = () => {
+            console.log('音頻可以開始播放');
+        };
+
         audioPlayer.onplay = () => {
             speaking = true;
-            console.log('開始播放');
+            console.log('開始播放音頻');
         };
 
         audioPlayer.onended = () => {
             speaking = false;
+            console.log('音頻播放完成');
             URL.revokeObjectURL(url);
-            console.log('播放完成');
         };
 
         audioPlayer.onerror = (error) => {
             speaking = false;
+            console.error('音頻播放錯誤:', error);
             URL.revokeObjectURL(url);
-            console.error('播放錯誤:', error);
         };
 
-        // 播放音頻
-        try {
-            await audioPlayer.play();
-        } catch (error) {
-            console.error('播放失敗:', error);
-            // 在 iOS 上，需要用戶交互才能播放
-            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-                const playOnClick = async () => {
-                    document.removeEventListener('click', playOnClick);
-                    try {
-                        await audioPlayer.play();
-                    } catch (retryError) {
-                        console.error('重試播放失敗:', retryError);
+        // 設置音頻源
+        audioPlayer.src = url;
+        
+        // 在 iOS 上，需要用戶交互才能播放
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            console.log('檢測到 iOS 設備');
+            
+            const playAudio = async () => {
+                try {
+                    // 預加載音頻
+                    await audioPlayer.load();
+                    console.log('音頻已加載');
+                    
+                    // 播放音頻
+                    const playPromise = audioPlayer.play();
+                    if (playPromise !== undefined) {
+                        await playPromise;
+                        console.log('音頻開始播放');
                     }
-                };
-
-                // 如果用戶已經交互過，直接嘗試播放
-                if (document.body.classList.contains('user-interacted')) {
-                    await playOnClick();
-                } else {
-                    // 等待用戶點擊
-                    document.addEventListener('click', playOnClick, { once: true });
-                    console.log('等待用戶點擊以開始播放...');
+                } catch (error) {
+                    console.error('播放失敗:', error);
                 }
+            };
+
+            // 如果用戶已經交互過，直接播放
+            if (document.body.classList.contains('user-interacted')) {
+                console.log('用戶已交互，嘗試直接播放');
+                await playAudio();
+            } else {
+                // 等待用戶點擊
+                console.log('等待用戶交互...');
+                const clickHandler = async () => {
+                    document.body.classList.add('user-interacted');
+                    document.removeEventListener('click', clickHandler);
+                    await playAudio();
+                };
+                document.addEventListener('click', clickHandler);
             }
+        } else {
+            // 非 iOS 設備直接播放
+            console.log('非 iOS 設備，直接播放');
+            await audioPlayer.play();
         }
     } catch (error) {
-        console.error('TTS 錯誤:', error);
+        console.error('TTS 處理錯誤:', error);
         speaking = false;
     }
 }
