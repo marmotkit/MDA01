@@ -5,7 +5,10 @@ let currentSide = null;
 
 // 初始化語音識別
 function initSpeechRecognition() {
-    if ('webkitSpeechRecognition' in window) {
+    // 檢測是否為 iOS 設備
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    
+    if ('webkitSpeechRecognition' in window && !isIOS) {
         recognition = new webkitSpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -65,8 +68,24 @@ function initSpeechRecognition() {
                 console.error('無法獲得麥克風權限:', err);
                 alert('請允許使用麥克風以啟用語音功能');
             });
+    } else if (isIOS) {
+        // iOS 設備特殊處理
+        console.log('iOS 設備檢測：語音輸入功能受限');
+        // 禁用語音輸入按鈕
+        const leftMicButton = document.querySelector('.mic-button.left');
+        const rightMicButton = document.querySelector('.mic-button.right');
+        if (leftMicButton) leftMicButton.style.display = 'none';
+        if (rightMicButton) rightMicButton.style.display = 'none';
+        
+        // 顯示替代提示
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'ios-warning';
+        warningDiv.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px; border-radius: 5px; text-align: center;';
+        warningDiv.innerHTML = '注意：由於 iOS 系統限制，語音輸入功能在此設備上不可用。請使用文字輸入。';
+        document.body.insertBefore(warningDiv, document.body.firstChild);
     } else {
-        alert('您的瀏覽器不支持語音識別功能');
+        console.log('瀏覽器不支持語音識別功能');
+        alert('您的瀏覽器不支持語音識別功能，請使用文字輸入。');
     }
 }
 
@@ -418,9 +437,54 @@ document.addEventListener('DOMContentLoaded', function() {
         swapBidirectionalBtn.addEventListener('click', swapBidirectionalLanguages);
     }
 
+    // 左側文字輸入處理
+    const leftTextInput = document.getElementById('leftTextInput');
+    const sendLeftText = document.getElementById('sendLeftText');
+    
+    if (sendLeftText) {
+        sendLeftText.addEventListener('click', () => handleTextInput('left'));
+    }
+    
+    if (leftTextInput) {
+        leftTextInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleTextInput('left');
+            }
+        });
+    }
+    
+    // 右側文字輸入處理
+    const rightTextInput = document.getElementById('rightTextInput');
+    const sendRightText = document.getElementById('sendRightText');
+    
+    if (sendRightText) {
+        sendRightText.addEventListener('click', () => handleTextInput('right'));
+    }
+    
+    if (rightTextInput) {
+        rightTextInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleTextInput('right');
+            }
+        });
+    }
+
     // 初始化 UI
     updateRecordingUI();
 });
+
+// 處理文字輸入的函數
+function handleTextInput(side) {
+    const inputElement = document.getElementById(side + 'TextInput');
+    if (!inputElement) return;
+    
+    const text = inputElement.value.trim();
+    if (text) {
+        addChatBubble(text, side);
+        translateAndSpeak(text, side);
+        inputElement.value = ''; // 清空輸入框
+    }
+}
 
 // 取得左側語言
 function getLeftLanguage() {

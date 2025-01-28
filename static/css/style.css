@@ -751,3 +751,56 @@ body {
 .form-check-label i {
     font-size: 1.1em;
 }
+
+/* 文字輸入樣式 */
+.input-group {
+    margin: 10px 0;
+    background-color: #2d3748;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.input-group .form-control {
+    background-color: #2d3748;
+    border: 1px solid #4a5568;
+    color: #e2e8f0;
+    padding: 12px;
+    font-size: 16px;
+}
+
+.input-group .form-control:focus {
+    background-color: #2d3748;
+    border-color: #4299e1;
+    box-shadow: none;
+    color: #e2e8f0;
+}
+
+.input-group .btn {
+    background-color: #4299e1;
+    border: none;
+    color: white;
+    padding: 12px 20px;
+}
+
+.input-group .btn:hover {
+    background-color: #3182ce;
+}
+
+.input-group .btn i {
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .input-group {
+        margin: 5px 0;
+    }
+    
+    .input-group .form-control {
+        font-size: 14px;
+        padding: 10px;
+    }
+    
+    .input-group .btn {
+        padding: 10px 15px;
+    }
+}

@@ -58,15 +58,27 @@
                         </div>
                         <div class="conversation-controls">
                             <div class="control-group">
-                                <button class="btn btn-primary" id="speakLeft">
+                                <div class="input-group mb-3">
+                                    <input type="text" id="leftTextInput" class="form-control" placeholder="在此輸入左側文字...">
+                                    <button class="btn btn-outline-primary" id="sendLeftText">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                                <button class="btn btn-primary mic-button left" id="speakLeft">
                                     <i class="fas fa-microphone"></i> 左側發言
                                 </button>
                                 <button class="btn btn-danger" id="stopConversation">
                                     <i class="fas fa-stop-circle"></i> 停止對話
                                 </button>
-                                <button class="btn btn-primary" id="speakRight">
+                                <button class="btn btn-primary mic-button right" id="speakRight">
                                     <i class="fas fa-microphone"></i> 右側發言
                                 </button>
+                                <div class="input-group mb-3">
+                                    <input type="text" id="rightTextInput" class="form-control" placeholder="在此輸入右側文字...">
+                                    <button class="btn btn-outline-primary" id="sendRightText">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="conversation-footer">
