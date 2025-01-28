@@ -5,90 +5,128 @@ let currentSide = null;
 
 // 初始化語音識別
 function initSpeechRecognition() {
-    // 檢測是否為 iOS 設備且使用 Safari 瀏覽器
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    const isIOSSafari = isIOS && isSafari;
-    
-    if ('webkitSpeechRecognition' in window && !isIOSSafari) {
-        recognition = new webkitSpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
+    if ('webkitSpeechRecognition' in window) {
+        try {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
 
-        recognition.onstart = () => {
-            isRecording = true;
-            updateRecordingUI();
-        };
-
-        recognition.onend = () => {
-            isRecording = false;
-            currentSide = null;
-            updateRecordingUI();
-            // 如果是意外停止，自動重新開始
-            if (currentSide) {
-                startRecording(currentSide);
-            }
-        };
-
-        recognition.onresult = (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript;
-                } else {
-                    interimTranscript += transcript;
+            recognition.onstart = () => {
+                isRecording = true;
+                updateRecordingUI();
+                // 移除警告訊息（如果存在）
+                const warningDiv = document.querySelector('.speech-warning');
+                if (warningDiv) {
+                    warningDiv.remove();
                 }
-            }
+            };
 
-            if (finalTranscript) {
-                addChatBubble(finalTranscript, currentSide);
-                translateAndSpeak(finalTranscript, currentSide);
-            }
-            if (interimTranscript) {
-                updateInterimTranscript(interimTranscript);
-            }
-        };
+            recognition.onend = () => {
+                isRecording = false;
+                currentSide = null;
+                updateRecordingUI();
+                // 如果是意外停止，自動重新開始
+                if (currentSide) {
+                    startRecording(currentSide);
+                }
+            };
 
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            if (event.error === 'not-allowed') {
-                alert('請允許使用麥克風以啟用語音功能');
-            }
-            stopRecording();
-        };
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
 
-        // 在頁面加載時請求麥克風權限
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                stream.getTracks().forEach(track => track.stop());
-                console.log('麥克風權限已獲得');
-            })
-            .catch(err => {
-                console.error('無法獲得麥克風權限:', err);
-                alert('請允許使用麥克風以啟用語音功能');
-            });
-    } else if (isIOSSafari) {
-        // iOS Safari 特殊處理
-        console.log('iOS Safari 檢測：語音輸入功能受限');
-        // 禁用語音輸入按鈕
-        const leftMicButton = document.querySelector('.mic-button.left');
-        const rightMicButton = document.querySelector('.mic-button.right');
-        if (leftMicButton) leftMicButton.style.display = 'none';
-        if (rightMicButton) rightMicButton.style.display = 'none';
-        
-        // 顯示替代提示
-        const warningDiv = document.createElement('div');
-        warningDiv.className = 'ios-warning';
-        warningDiv.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px; border-radius: 5px; text-align: center;';
-        warningDiv.innerHTML = '注意：由於 iOS Safari 瀏覽器限制，語音輸入功能在此設備上不可用。請使用文字輸入。';
-        document.body.insertBefore(warningDiv, document.body.firstChild);
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    addChatBubble(finalTranscript, currentSide);
+                    translateAndSpeak(finalTranscript, currentSide);
+                }
+                if (interimTranscript) {
+                    updateInterimTranscript(interimTranscript);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('語音識別錯誤:', event.error);
+                isRecording = false;
+                updateRecordingUI();
+
+                // 根據錯誤類型顯示不同的提示
+                let errorMessage = '';
+                switch (event.error) {
+                    case 'not-allowed':
+                        errorMessage = '請允許使用麥克風以啟用語音功能';
+                        showSpeechWarning(errorMessage);
+                        break;
+                    case 'no-speech':
+                        errorMessage = '未檢測到語音，請靠近麥克風或檢查麥克風設置';
+                        break;
+                    case 'network':
+                        errorMessage = '網絡連接問題，請檢查您的網絡連接';
+                        break;
+                    default:
+                        errorMessage = '語音識別發生錯誤，請使用文字輸入或重試';
+                }
+                
+                if (errorMessage && event.error !== 'no-speech') {
+                    showSpeechWarning(errorMessage);
+                }
+            };
+
+            // 請求麥克風權限
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    stream.getTracks().forEach(track => track.stop());
+                    console.log('麥克風權限已獲得');
+                })
+                .catch(err => {
+                    console.error('無法獲得麥克風權限:', err);
+                    showSpeechWarning('請允許使用麥克風以啟用語音功能');
+                });
+
+        } catch (error) {
+            console.error('初始化語音識別失敗:', error);
+            showSpeechWarning('您的瀏覽器可能不完全支持語音識別功能，請使用文字輸入');
+        }
     } else {
         console.log('瀏覽器不支持語音識別功能');
-        alert('您的瀏覽器不支持語音識別功能，請使用文字輸入。');
+        showSpeechWarning('您的瀏覽器不支持語音識別功能，請使用文字輸入');
     }
+}
+
+// 顯示語音警告訊息
+function showSpeechWarning(message) {
+    // 移除現有的警告（如果有）
+    const existingWarning = document.querySelector('.speech-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+
+    // 創建新的警告訊息
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'speech-warning';
+    warningDiv.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px; border-radius: 5px; text-align: center; position: relative;';
+    
+    // 添加關閉按鈕
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = 'position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 20px; cursor: pointer; color: #856404;';
+    closeButton.onclick = () => warningDiv.remove();
+    
+    // 設置警告內容
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    
+    warningDiv.appendChild(messageSpan);
+    warningDiv.appendChild(closeButton);
+    document.body.insertBefore(warningDiv, document.body.firstChild);
 }
 
 // 開始錄音
