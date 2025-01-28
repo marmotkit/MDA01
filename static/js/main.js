@@ -142,10 +142,11 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         // 檢查音頻 URL
         if (!data.audio_url) {
             console.error('未收到音頻 URL');
-            document.querySelectorAll('.btn-play').forEach(button => {
-                button.textContent = '無法播放';
-                button.disabled = true;
-            });
+            const playButton = translatedBubble.querySelector('.btn-play');
+            if (playButton) {
+                playButton.textContent = '無法播放';
+                playButton.disabled = true;
+            }
             return;
         }
 
@@ -154,52 +155,64 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
             console.log('準備播放音頻:', data.audio_url);
             const audio = new Audio(data.audio_url);
             
+            // 保存當前音頻 URL 和音頻對象
+            currentAudioUrl = data.audio_url;
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            currentAudio = audio;
+            
+            const playButton = translatedBubble.querySelector('.btn-play');
+            
             // 設置音頻事件處理
-            audio.oncanplay = () => {
-                console.log('音頻已準備好播放');
+            audio.onloadeddata = () => {
+                console.log('音頻數據已加載');
                 audio.play().then(() => {
                     console.log('開始播放音頻');
                 }).catch(error => {
                     console.error('播放音頻失敗:', error);
-                    document.querySelectorAll('.btn-play').forEach(button => {
-                        button.textContent = '重新播放';
-                        button.disabled = false;
-                    });
+                    if (playButton) {
+                        playButton.textContent = '重新播放';
+                        playButton.disabled = false;
+                    }
                 });
             };
 
             audio.onended = () => {
                 console.log('音頻播放完成');
-                document.querySelectorAll('.btn-play').forEach(button => {
-                    button.textContent = '重新播放';
-                    button.disabled = false;
-                });
+                if (playButton) {
+                    playButton.textContent = '重新播放';
+                    playButton.disabled = false;
+                }
             };
 
             audio.onerror = (error) => {
                 console.error('音頻加載失敗:', error);
-                document.querySelectorAll('.btn-play').forEach(button => {
-                    button.textContent = '重新播放';
-                    button.disabled = false;
-                });
+                if (playButton) {
+                    playButton.textContent = '重新播放';
+                    playButton.disabled = false;
+                }
             };
 
-            // 保存當前音頻 URL
-            currentAudioUrl = data.audio_url;
-            currentAudio = audio;
+            // 開始加載音頻
+            audio.load();
+            
         } catch (error) {
             console.error('音頻播放設置失敗:', error);
-            document.querySelectorAll('.btn-play').forEach(button => {
-                button.textContent = '重新播放';
-                button.disabled = false;
-            });
+            const playButton = translatedBubble.querySelector('.btn-play');
+            if (playButton) {
+                playButton.textContent = '重新播放';
+                playButton.disabled = false;
+            }
         }
     } catch (error) {
         console.error('翻譯或播放錯誤:', error);
-        document.querySelectorAll('.btn-play').forEach(button => {
-            button.textContent = '重新播放';
-            button.disabled = false;
-        });
+        const playButton = document.querySelector(`${listenerSection} .btn-play:last-child`);
+        if (playButton) {
+            playButton.textContent = '重新播放';
+            playButton.disabled = false;
+        }
     }
 }
 
@@ -218,8 +231,8 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
         playButton.disabled = true;
         playButton.onclick = async () => {
             try {
-                if (!currentAudioUrl) {
-                    console.error('沒有可用的音頻 URL');
+                if (!currentAudioUrl || !currentAudio) {
+                    console.error('沒有可用的音頻');
                     playButton.textContent = '無法播放';
                     playButton.disabled = true;
                     return;
@@ -228,10 +241,17 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
                 playButton.textContent = '播放中...';
                 playButton.disabled = true;
 
-                // 使用 Audio 元素重新播放
+                // 如果當前有音頻在播放，先停止
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                }
+
+                // 重新創建音頻對象以確保可以重新播放
                 const audio = new Audio(currentAudioUrl);
+                currentAudio = audio;
                 
-                audio.oncanplay = () => {
+                audio.onloadeddata = () => {
                     audio.play().catch(error => {
                         console.error('重新播放失敗:', error);
                         playButton.textContent = '重新播放';
@@ -250,9 +270,11 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
                     playButton.disabled = false;
                 };
 
-                currentAudio = audio;
+                // 開始加載音頻
+                audio.load();
+
             } catch (error) {
-                console.error('重新播放失敗:', error);
+                console.error('播放按鈕點擊處理錯誤:', error);
                 playButton.textContent = '重新播放';
                 playButton.disabled = false;
             }
@@ -260,7 +282,9 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
         bubble.appendChild(playButton);
     }
 
-    container.insertBefore(bubble, container.firstChild);
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+    
     return bubble;
 }
 
