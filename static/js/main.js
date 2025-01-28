@@ -11,6 +11,7 @@ function initAudioContext() {
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
+    return audioContext;
 }
 
 // 初始化語音識別
@@ -18,7 +19,7 @@ function initSpeechRecognition() {
     if ('webkitSpeechRecognition' in window) {
         try {
             recognition = new webkitSpeechRecognition();
-            recognition.continuous = false;  // 改為單次識別模式
+            recognition.continuous = true;  // 改回連續模式
             recognition.interimResults = true;
 
             recognition.onstart = () => {
@@ -36,7 +37,7 @@ function initSpeechRecognition() {
                 isRecording = false;
                 updateRecordingUI();
                 
-                // 只有在當前側別存在且沒有正在處理音頻時才重新開始錄音
+                // 如果當前有指定側別且不在處理音頻，則重新開始錄音
                 if (currentSide && !isProcessingAudio) {
                     console.log('準備重新開始錄音');
                     setTimeout(() => {
@@ -48,7 +49,7 @@ function initSpeechRecognition() {
                             currentSide = null;
                             updateRecordingUI();
                         }
-                    }, 100);
+                    }, 300);
                 }
             };
 
@@ -152,39 +153,51 @@ function showSpeechWarning(message) {
 
 // 開始錄音
 function startRecording(side) {
-    if (!recognition) return;
-    
-    // 初始化音頻上下文（需要用戶交互）
-    initAudioContext();
+    if (!recognition) {
+        initSpeechRecognition();
+    }
     
     console.log('開始錄音，側別:', side);
     
-    // 如果正在處理音頻，不要開始新的錄音
+    // 如果正在處理音頻，等待處理完成
     if (isProcessingAudio) {
-        console.log('正在處理音頻，暫時不開始新的錄音');
+        console.log('正在處理音頻，稍後自動開始錄音');
+        currentSide = side;
         return;
     }
     
-    // 如果當前正在錄音，且側別不同，則先停止當前錄音
-    if (isRecording && currentSide !== side) {
-        recognition.stop();
+    try {
+        // 如果當前正在錄音，且側別不同，則先停止當前錄音
+        if (isRecording) {
+            if (currentSide !== side) {
+                recognition.stop();
+                setTimeout(() => {
+                    currentSide = side;
+                    startRecordingWithLang(side);
+                }, 300);
+            }
+        } else {
+            currentSide = side;
+            startRecordingWithLang(side);
+        }
+    } catch (error) {
+        console.error('開始錄音失敗:', error);
+        currentSide = null;
+        updateRecordingUI();
     }
-    
-    currentSide = side;
-    
-    // 設置語言並開始錄音
+}
+
+// 使用指定語言開始錄音
+function startRecordingWithLang(side) {
     try {
         const sourceLang = side === 'left' ? 
             document.getElementById('leftLanguage').value : 
             document.getElementById('rightLanguage').value;
         recognition.lang = sourceLang;
-        
-        if (!isRecording) {
-            recognition.start();
-            console.log('開始新的錄音');
-        }
+        recognition.start();
+        console.log('開始新的錄音，語言:', sourceLang);
     } catch (error) {
-        console.error('開始錄音失敗:', error);
+        console.error('設置語言並開始錄音失敗:', error);
         currentSide = null;
         updateRecordingUI();
     }
@@ -259,6 +272,7 @@ async function speakText(text, lang) {
         isProcessingAudio = true;
         
         // 暫時停止錄音
+        const tempSide = currentSide;
         if (isRecording) {
             recognition.stop();
         }
@@ -284,67 +298,71 @@ async function speakText(text, lang) {
         }
 
         const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        const audio = new Audio();
+        audio.src = url;
         
+        // 確保音頻已加載
+        await new Promise((resolve) => {
+            audio.addEventListener('canplaythrough', resolve, { once: true });
+            audio.load();
+        });
+
         // 使用 Web Audio API 播放音頻
-        const audioSource = audioContext.createMediaElementSource(audio);
-        audioSource.connect(audioContext.destination);
+        const context = initAudioContext();
+        const source = context.createMediaElementSource(audio);
+        source.connect(context.destination);
         
-        return new Promise((resolve, reject) => {
-            audio.onended = () => {
-                URL.revokeObjectURL(url);
-                isProcessingAudio = false;
-                // 音頻播放完成後，如果有指定側別，則恢復錄音
-                if (currentSide) {
-                    setTimeout(() => startRecording(currentSide), 100);
+        // 自動播放
+        try {
+            await context.resume();
+            await audio.play();
+            console.log('音頻開始自動播放');
+        } catch (playError) {
+            console.error('自動播放失敗，添加播放按鈕:', playError);
+            const playButton = document.createElement('button');
+            playButton.className = 'btn btn-primary mt-2';
+            playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+            
+            playButton.onclick = async () => {
+                try {
+                    await context.resume();
+                    await audio.play();
+                    playButton.remove();
+                } catch (err) {
+                    console.error('手動播放失敗:', err);
                 }
+            };
+            
+            const chatBubbles = document.getElementsByClassName('chat-bubble');
+            if (chatBubbles.length > 0) {
+                chatBubbles[chatBubbles.length - 1].appendChild(playButton);
+            }
+        }
+
+        // 等待播放完成
+        await new Promise((resolve) => {
+            audio.onended = () => {
+                console.log('音頻播放完成');
+                URL.revokeObjectURL(url);
                 resolve();
             };
-
-            audio.onerror = (error) => {
-                console.error('音頻播放錯誤:', error);
-                URL.revokeObjectURL(url);
-                isProcessingAudio = false;
-                if (currentSide) {
-                    setTimeout(() => startRecording(currentSide), 100);
-                }
-                reject(error);
-            };
-
-            // 嘗試自動播放
-            audio.play().catch((error) => {
-                console.error('自動播放失敗:', error);
-                // 如果自動播放失敗，添加播放按鈕
-                const playButton = document.createElement('button');
-                playButton.className = 'btn btn-primary mt-2';
-                playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
-                
-                playButton.onclick = async () => {
-                    try {
-                        // 恢復音頻上下文
-                        if (audioContext.state === 'suspended') {
-                            await audioContext.resume();
-                        }
-                        await audio.play();
-                        playButton.remove();
-                    } catch (err) {
-                        console.error('手動播放失敗:', err);
-                    }
-                };
-                
-                const chatBubbles = document.getElementsByClassName('chat-bubble');
-                if (chatBubbles.length > 0) {
-                    chatBubbles[chatBubbles.length - 1].appendChild(playButton);
-                }
-            });
         });
+
+        // 清理並恢復錄音
+        isProcessingAudio = false;
+        if (tempSide) {
+            setTimeout(() => {
+                startRecording(tempSide);
+            }, 300);
+        }
     } catch (error) {
         console.error('TTS 處理錯誤:', error);
         isProcessingAudio = false;
         if (currentSide) {
-            setTimeout(() => startRecording(currentSide), 100);
+            setTimeout(() => {
+                startRecording(currentSide);
+            }, 300);
         }
-        throw error;
     }
 }
 
@@ -551,11 +569,14 @@ function getRightLanguage() {
 
 // 在頁面加載時初始化音頻上下文
 document.addEventListener('DOMContentLoaded', () => {
-    // 添加用戶交互事件監聽
+    // 初始化語音識別
+    initSpeechRecognition();
+    
+    // 初始化音頻上下文（需要用戶交互）
     document.body.addEventListener('click', () => {
-        initAudioContext();
-        if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume();
+        const context = initAudioContext();
+        if (context.state === 'suspended') {
+            context.resume();
         }
     }, { once: true });
 });
