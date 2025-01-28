@@ -125,6 +125,7 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
             },
             body: JSON.stringify({
                 text: text,
+                source_lang: 'auto',
                 target_lang: targetLang
             })
         });
@@ -162,8 +163,10 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                 console.log('音頻可以播放');
                 audio.play().then(() => {
                     console.log('開始播放音頻');
+                    updatePlayButtonState(listenerSection, '播放中...', true);
                 }).catch(error => {
                     console.error('自動播放失敗:', error);
+                    updatePlayButtonState(listenerSection, '重新播放', false);
                 });
             });
 
@@ -233,7 +236,9 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 currentAudio = newAudio;
 
                 newAudio.addEventListener('canplaythrough', () => {
-                    newAudio.play().catch(error => {
+                    newAudio.play().then(() => {
+                        console.log('開始重新播放');
+                    }).catch(error => {
                         console.error('重新播放失敗:', error);
                         updatePlayButtonState(sectionSelector, '重新播放', false);
                     });

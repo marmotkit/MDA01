@@ -148,7 +148,7 @@ select {
 /* 播放按鈕容器樣式 */
 .play-button-container {
     position: absolute;
-    right: 20px;
+    left: 20px;
     bottom: 20px;
     background: white;
     padding: 10px;
@@ -177,6 +177,7 @@ select {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .btn-play:disabled {
@@ -221,7 +222,7 @@ select {
     }
     
     .play-button-container {
-        right: 15px;
+        left: 15px;
         bottom: 15px;
     }
     
