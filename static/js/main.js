@@ -151,51 +151,26 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         if (data.translated_text) {
             addChatBubble(data.translated_text, 'left', true, listenerSection);
             
-            // 如果有音頻 URL，立即播放翻譯後的音頻
+            // 如果有音頻 URL，創建播放按鈕並自動觸發播放
             if (data.audio_url) {
                 try {
                     console.log('準備播放翻譯音頻:', data.audio_url);
-                    
-                    // 停止當前播放的音頻
-                    if (currentAudio) {
-                        currentAudio.pause();
-                        currentAudio = null;
-                    }
-
-                    // 創建新的音頻對象
-                    const audio = new Audio(data.audio_url);
-                    audio.volume = 1.0;
-                    
-                    // 更新當前音頻
-                    currentAudio = audio;
                     currentAudioUrl = data.audio_url;
-
-                    // 更新按鈕狀態
-                    updatePlayButtonState(listenerSection, '載入中...', true);
-
-                    // 播放音頻
-                    try {
-                        await audio.play();
-                        console.log('音頻開始播放');
-                        updatePlayButtonState(listenerSection, '播放中...', true);
-
-                        // 監聽播放結束事件
-                        audio.addEventListener('ended', () => {
-                            console.log('音頻播放結束');
-                            updatePlayButtonState(listenerSection, '重新播放', false);
-                            currentAudio = null;
-                        }, { once: true });
-
-                    } catch (error) {
-                        console.error('音頻播放失敗:', error);
-                        updatePlayButtonState(listenerSection, '重新播放', false);
-                        currentAudio = null;
+                    
+                    // 確保播放按鈕存在
+                    updatePlayButtonState(listenerSection, '重新播放', false);
+                    
+                    // 獲取播放按鈕並自動觸發點擊事件
+                    const section = document.querySelector(listenerSection);
+                    const playButton = section.querySelector('.btn-play');
+                    if (playButton) {
+                        console.log('自動觸發播放按鈕');
+                        playButton.click();
                     }
 
                 } catch (error) {
-                    console.error('音頻播放失敗:', error);
+                    console.error('音頻播放準備失敗:', error);
                     updatePlayButtonState(listenerSection, '重新播放', false);
-                    currentAudio = null;
                 }
             } else {
                 console.error('未收到音頻 URL');
