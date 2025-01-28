@@ -120,7 +120,7 @@ select {
 
 /* 聊天氣泡樣式 */
 .chat-bubble {
-    max-width: 80%;
+    max-width: 70%;
     padding: 15px 20px;
     margin: 10px 0;
     border-radius: 15px;
@@ -144,14 +144,50 @@ select {
     border-bottom-right-radius: 5px;
 }
 
+/* 播放按鈕容器樣式 */
+.play-button-container {
+    position: fixed;
+    right: 30px;
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.top-section .play-button-container {
+    top: 30px;
+    transform: rotate(180deg);
+}
+
+.bottom-section .play-button-container {
+    bottom: 30px;
+}
+
 /* 播放按鈕樣式 */
-.chat-bubble .btn-play {
-    margin-top: 10px;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--primary-color);
-    border: 1px solid currentColor;
+.btn-play {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all var(--transition-speed) ease;
+    min-width: 120px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+}
+
+.btn-play:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-play:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* 狀態指示器 */
@@ -185,8 +221,26 @@ select {
         width: 100%;
     }
     
+    .play-button-container {
+        right: 20px;
+    }
+    
+    .top-section .play-button-container {
+        top: 20px;
+    }
+    
+    .bottom-section .play-button-container {
+        bottom: 20px;
+    }
+    
+    .btn-play {
+        min-width: 100px;
+        padding: 10px 20px;
+        font-size: 0.8rem;
+    }
+    
     .chat-bubble {
-        max-width: 90%;
+        max-width: 80%;
     }
 }
 
