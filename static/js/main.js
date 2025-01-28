@@ -117,7 +117,11 @@ function stopRecording(button) {
 // 翻譯並播放
 async function translateAndSpeak(text, targetLang, isTopSection) {
     try {
-        console.log('開始翻譯請求:', { text, targetLang });
+        // 獲取對方區域的語言設置
+        const listenerSection = isTopSection ? '.bottom-section' : '.top-section';
+        const listenerLang = document.querySelector(`${listenerSection} .language-select`).value;
+        
+        console.log('開始翻譯請求:', { text, sourceLang: targetLang, targetLang: listenerLang });
         const response = await fetch('/translate', {
             method: 'POST',
             headers: {
@@ -125,8 +129,8 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
             },
             body: JSON.stringify({
                 text: text,
-                source_lang: isTopSection ? targetLang : 'zh-TW',
-                target_lang: isTopSection ? 'zh-TW' : targetLang
+                source_lang: targetLang,
+                target_lang: listenerLang
             })
         });
 
@@ -138,7 +142,6 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         console.log('收到翻譯響應:', data);
         
         // 確定說話者和聽者的區域
-        const listenerSection = isTopSection ? '.bottom-section' : '.top-section';
         const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
         
         // 在說話者的聊天框顯示原文
@@ -153,9 +156,10 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                 try {
                     console.log('準備播放翻譯音頻:', data.audio_url);
                     
-                    // 創建新的音頻對象
-                    const audio = new Audio(data.audio_url);
-                    audio.volume = 1.0; // 設置最大音量
+                    // 創建新的音頻對象並設置屬性
+                    const audio = new Audio();
+                    audio.src = data.audio_url;
+                    audio.volume = 1.0;
                     
                     // 停止當前播放的音頻
                     if (currentAudio) {
@@ -170,26 +174,33 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 更新按鈕狀態
                     updatePlayButtonState(listenerSection, '播放中...', true);
 
-                    // 設置音頻加載完成後自動播放
-                    audio.addEventListener('canplaythrough', async () => {
-                        console.log('音頻加載完成，開始自動播放');
-                        try {
-                            await audio.play();
-                            console.log('音頻開始播放');
-                        } catch (error) {
-                            console.error('自動播放失敗:', error);
-                            updatePlayButtonState(listenerSection, '重新播放', false);
-                        }
-                    }, { once: true });
+                    // 直接嘗試播放
+                    try {
+                        await audio.play();
+                        console.log('音頻開始播放');
+                    } catch (error) {
+                        console.error('直接播放失敗，嘗試加載後播放:', error);
+                        
+                        // 如果直接播放失敗，等待加載後再播放
+                        audio.addEventListener('canplaythrough', async () => {
+                            try {
+                                await audio.play();
+                                console.log('音頻加載後開始播放');
+                            } catch (playError) {
+                                console.error('加載後播放仍然失敗:', playError);
+                                updatePlayButtonState(listenerSection, '重新播放', false);
+                            }
+                        }, { once: true });
+
+                        // 開始加載
+                        audio.load();
+                    }
 
                     // 監聽播放結束事件
                     audio.addEventListener('ended', () => {
                         console.log('音頻播放結束');
                         updatePlayButtonState(listenerSection, '重新播放', false);
                     }, { once: true });
-
-                    // 開始加載音頻
-                    audio.load();
 
                 } catch (error) {
                     console.error('音頻播放失敗:', error);
