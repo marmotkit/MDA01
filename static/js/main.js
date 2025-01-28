@@ -239,23 +239,21 @@ async function translateAndSpeak(text, side) {
         const data = await response.json();
         
         if (data.translation) {
-            // 添加翻譯結果到對話框
-            addChatBubble(data.translation, side === 'left' ? 'right' : 'left');
+            // 添加翻譯結果到對話框，並標記為翻譯內容
+            const translationBubble = addChatBubble(data.translation, side === 'left' ? 'right' : 'left', true);
             
             // 檢查是否處於靜音模式
             const muteMode = document.getElementById('muteModeBidirectional').checked;
             if (!muteMode) {
                 try {
-                    // 使用新的朗讀方式
-                    await speakText(data.translation, targetLang);
+                    // 先創建播放按鈕
+                    const playButton = createPlayButton(data.translation, targetLang, translationBubble);
+                    translationBubble.appendChild(playButton);
+                    
+                    // 自動觸發播放
+                    playButton.click();
                 } catch (error) {
-                    console.error('朗讀錯誤:', error);
-                    // 如果朗讀失敗，嘗試重新朗讀
-                    try {
-                        await speakText(data.translation, targetLang);
-                    } catch (retryError) {
-                        console.error('重試朗讀失敗:', retryError);
-                    }
+                    console.error('音頻處理錯誤:', error);
                 }
             }
         }
@@ -263,6 +261,31 @@ async function translateAndSpeak(text, side) {
         console.error('翻譯錯誤:', error);
         alert('翻譯過程中發生錯誤');
     }
+}
+
+// 創建播放按鈕
+function createPlayButton(text, lang, container) {
+    const playButton = document.createElement('button');
+    playButton.className = 'btn btn-primary mt-2';
+    playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+    
+    playButton.onclick = async () => {
+        try {
+            playButton.disabled = true;
+            playButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 播放中...';
+            
+            await speakText(text, lang);
+            
+            playButton.disabled = false;
+            playButton.innerHTML = '<i class="fas fa-play"></i> 重新播放';
+        } catch (err) {
+            console.error('播放失敗:', err);
+            playButton.disabled = false;
+            playButton.innerHTML = '<i class="fas fa-play"></i> 重試播放';
+        }
+    };
+    
+    return playButton;
 }
 
 // 朗讀文字
@@ -312,39 +335,22 @@ async function speakText(text, lang) {
         const source = context.createMediaElementSource(audio);
         source.connect(context.destination);
         
-        // 自動播放
-        try {
-            await context.resume();
-            await audio.play();
-            console.log('音頻開始自動播放');
-        } catch (playError) {
-            console.error('自動播放失敗，添加播放按鈕:', playError);
-            const playButton = document.createElement('button');
-            playButton.className = 'btn btn-primary mt-2';
-            playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
-            
-            playButton.onclick = async () => {
-                try {
-                    await context.resume();
-                    await audio.play();
-                    playButton.remove();
-                } catch (err) {
-                    console.error('手動播放失敗:', err);
-                }
-            };
-            
-            const chatBubbles = document.getElementsByClassName('chat-bubble');
-            if (chatBubbles.length > 0) {
-                chatBubbles[chatBubbles.length - 1].appendChild(playButton);
-            }
-        }
-
+        // 播放音頻
+        await context.resume();
+        await audio.play();
+        
         // 等待播放完成
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
             audio.onended = () => {
                 console.log('音頻播放完成');
                 URL.revokeObjectURL(url);
                 resolve();
+            };
+            
+            audio.onerror = (error) => {
+                console.error('音頻播放錯誤:', error);
+                URL.revokeObjectURL(url);
+                reject(error);
             };
         });
 
@@ -363,6 +369,7 @@ async function speakText(text, lang) {
                 startRecording(currentSide);
             }, 300);
         }
+        throw error; // 將錯誤往上拋出，以便按鈕處理
     }
 }
 
@@ -427,21 +434,27 @@ function updateRecordingUI() {
 }
 
 // 添加聊天氣泡
-function addChatBubble(text, side) {
+function addChatBubble(text, side, isTranslation = false) {
     const chatContainer = document.getElementById('chatContainer');
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${side}`;
     bubble.textContent = text;
     
-    // 將新氣泡添加到頂部
-    if (chatContainer.firstChild) {
-        chatContainer.insertBefore(bubble, chatContainer.firstChild);
-    } else {
-        chatContainer.appendChild(bubble);
+    // 為翻譯後的氣泡添加標識
+    if (isTranslation) {
+        bubble.dataset.isTranslation = 'true';
     }
     
-    // 保持滾動在頂部
-    chatContainer.scrollTop = 0;
+    // 將新氣泡添加到頂部
+    chatContainer.insertBefore(bubble, chatContainer.firstChild);
+    
+    // 確保滾動到頂部
+    chatContainer.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+    
+    return bubble;
 }
 
 // 更新臨時文字
