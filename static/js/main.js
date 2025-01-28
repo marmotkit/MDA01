@@ -163,12 +163,25 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     }
 
                     // 創建新的音頻對象
-                    const audio = new Audio(data.audio_url);
-                    audio.volume = 1.0;
+                    const audio = new Audio();
                     
                     // 更新當前音頻
                     currentAudio = audio;
                     currentAudioUrl = data.audio_url;
+
+                    // 更新按鈕狀態
+                    updatePlayButtonState(listenerSection, '載入中...', true);
+
+                    // 等待音頻加載完成
+                    await new Promise((resolve, reject) => {
+                        audio.addEventListener('canplaythrough', resolve, { once: true });
+                        audio.addEventListener('error', reject, { once: true });
+                        
+                        // 設置音頻屬性
+                        audio.preload = 'auto';
+                        audio.volume = 1.0;
+                        audio.src = data.audio_url;
+                    });
 
                     // 更新按鈕狀態
                     updatePlayButtonState(listenerSection, '播放中...', true);
@@ -239,7 +252,7 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 }
 
                 console.log('準備重新播放音頻:', currentAudioUrl);
-                updatePlayButtonState(sectionSelector, '播放中...', true);
+                updatePlayButtonState(sectionSelector, '載入中...', true);
 
                 // 停止當前播放的音頻
                 if (currentAudio) {
@@ -248,9 +261,23 @@ function updatePlayButtonState(sectionSelector, text, disabled) {
                 }
 
                 // 創建新的音頻對象
-                const newAudio = new Audio(currentAudioUrl);
-                newAudio.volume = 1.0;
+                const newAudio = new Audio();
+                
+                // 等待音頻加載完成
+                await new Promise((resolve, reject) => {
+                    newAudio.addEventListener('canplaythrough', resolve, { once: true });
+                    newAudio.addEventListener('error', reject, { once: true });
+                    
+                    // 設置音頻屬性
+                    newAudio.preload = 'auto';
+                    newAudio.volume = 1.0;
+                    newAudio.src = currentAudioUrl;
+                });
+
                 currentAudio = newAudio;
+                
+                // 更新按鈕狀態
+                updatePlayButtonState(sectionSelector, '播放中...', true);
 
                 // 播放音頻
                 await newAudio.play();
