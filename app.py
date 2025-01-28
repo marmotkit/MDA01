@@ -119,6 +119,10 @@ def text_to_speech():
         text = data.get('text', '')
         lang = data.get('lang', 'en')
 
+        # 打印配置信息
+        print(f"Azure Speech Key: {os.getenv('AZURE_SPEECH_KEY')}")
+        print(f"Azure Speech Region: {os.getenv('AZURE_SPEECH_REGION')}")
+
         # 根據語言選擇合適的語音
         voice_name = {
             'zh': 'zh-CN-XiaoxiaoNeural',
@@ -150,6 +154,8 @@ def text_to_speech():
         # Azure TTS endpoint
         endpoint = f"https://{os.getenv('AZURE_SPEECH_REGION')}.tts.speech.microsoft.com/cognitiveservices/v1"
         
+        print(f"Endpoint: {endpoint}")
+        
         # 設置請求頭
         headers = {
             'Ocp-Apim-Subscription-Key': os.getenv('AZURE_SPEECH_KEY'),
@@ -157,10 +163,16 @@ def text_to_speech():
             'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3'
         }
 
+        print("Sending request to Azure TTS...")
+        
         # 發送請求
         response = requests.post(endpoint, headers=headers, data=ssml.encode('utf-8'))
         
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        
         if response.status_code == 200:
+            print("Request successful")
             # 創建臨時文件
             temp_dir = tempfile.gettempdir()
             temp_file = os.path.join(temp_dir, 'speech.mp3')
@@ -177,12 +189,16 @@ def text_to_speech():
                 download_name='speech.mp3'
             )
         else:
-            print(f"TTS API error: {response.status_code} - {response.text}")
-            return jsonify({'error': f'TTS API error: {response.status_code}'}), 500
+            error_message = f"TTS API error: {response.status_code} - {response.text}"
+            print(error_message)
+            print(f"Request headers: {headers}")
+            print(f"Request body: {ssml}")
+            return jsonify({'error': error_message}), 500
 
     except Exception as e:
-        print(f"TTS error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        error_message = f"TTS error: {str(e)}"
+        print(error_message)
+        return jsonify({'error': error_message}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
