@@ -19,15 +19,27 @@ function initSpeechRecognition() {
                 if (warningDiv) {
                     warningDiv.remove();
                 }
+                console.log('語音識別開始，當前側:', currentSide);
             };
 
             recognition.onend = () => {
+                console.log('語音識別結束，isRecording:', isRecording, 'currentSide:', currentSide);
                 isRecording = false;
-                currentSide = null;
                 updateRecordingUI();
-                // 如果是意外停止，自動重新開始
+                
+                // 如果當前有指定側別，則重新開始錄音
                 if (currentSide) {
-                    startRecording(currentSide);
+                    console.log('嘗試重新開始錄音');
+                    setTimeout(() => {
+                        try {
+                            recognition.start();
+                            console.log('成功重新開始錄音');
+                        } catch (error) {
+                            console.error('重新開始錄音失敗:', error);
+                            currentSide = null; // 重置當前側
+                            updateRecordingUI();
+                        }
+                    }, 300);
                 }
             };
 
@@ -133,48 +145,50 @@ function showSpeechWarning(message) {
 function startRecording(side) {
     if (!recognition) return;
     
-    // 如果正在錄音但是不同側，先停止當前錄音
-    if (isRecording && currentSide !== side) {
+    console.log('開始錄音，側別:', side);
+    currentSide = side;
+    
+    // 如果正在錄音，先停止
+    if (isRecording) {
         recognition.stop();
-    }
-
-    // 如果沒有在錄音或者切換了側邊，開始新的錄音
-    if (!isRecording || currentSide !== side) {
-        currentSide = side;
-        const sourceLang = side === 'left' ? 
-            document.getElementById('leftLanguage').value : 
-            document.getElementById('rightLanguage').value;
-
-        recognition.lang = sourceLang;
-        
-        // 添加延遲以確保之前的錄音已完全停止
+        // 等待一下再重新開始
         setTimeout(() => {
             try {
+                const sourceLang = side === 'left' ? 
+                    document.getElementById('leftLanguage').value : 
+                    document.getElementById('rightLanguage').value;
+                recognition.lang = sourceLang;
                 recognition.start();
-                console.log('開始新的錄音');
+                console.log('重新開始錄音');
             } catch (error) {
                 console.error('開始錄音失敗:', error);
-                // 如果啟動失敗，等待一段時間後重試
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                        console.log('重試開始錄音');
-                    } catch (retryError) {
-                        console.error('重試錄音失敗:', retryError);
-                        showSpeechWarning('語音輸入啟動失敗，請重新點擊麥克風按鈕');
-                    }
-                }, 1000);
+                currentSide = null;
+                updateRecordingUI();
             }
-        }, 100);
+        }, 300);
+    } else {
+        try {
+            const sourceLang = side === 'left' ? 
+                document.getElementById('leftLanguage').value : 
+                document.getElementById('rightLanguage').value;
+            recognition.lang = sourceLang;
+            recognition.start();
+            console.log('開始新的錄音');
+        } catch (error) {
+            console.error('開始錄音失敗:', error);
+            currentSide = null;
+            updateRecordingUI();
+        }
     }
 }
 
 // 停止錄音
 function stopRecording() {
+    console.log('停止錄音');
     if (recognition && isRecording) {
+        currentSide = null; // 重要：先清除 currentSide
         recognition.stop();
         isRecording = false;
-        currentSide = null;
         updateRecordingUI();
     }
 }
@@ -239,14 +253,13 @@ async function speakText(text, lang) {
     try {
         console.log('開始 TTS 請求:', { text, lang });
         
-        // 取消當前播放
-        if (speaking) {
-            audioPlayer.pause();
-            audioPlayer.currentTime = 0;
+        // 暫時停止錄音
+        const tempSide = currentSide;
+        if (isRecording) {
+            recognition.stop();
         }
 
         // 發送 TTS 請求
-        console.log('發送 TTS 請求...');
         const response = await fetch('/tts', {
             method: 'POST',
             headers: {
@@ -262,92 +275,70 @@ async function speakText(text, lang) {
             throw new Error(`TTS 請求失敗: ${response.status}`);
         }
 
-        // 獲取音頻 blob
         const blob = await response.blob();
-        console.log('收到音頻數據，大小:', blob.size, '字節');
-        
         if (blob.size === 0) {
             throw new Error('收到空的音頻數據');
         }
 
         const url = URL.createObjectURL(blob);
-        console.log('創建的音頻 URL:', url);
-
+        
         // 創建新的音頻元素
-        audioPlayer = new Audio();
+        audioPlayer = new Audio(url);
         
-        // 設置音頻事件處理
-        audioPlayer.onloadedmetadata = () => {
-            console.log('音頻元數據加載完成，時長:', audioPlayer.duration);
-        };
+        // 確保音頻加載完成
+        await new Promise((resolve) => {
+            audioPlayer.addEventListener('canplaythrough', resolve, { once: true });
+            audioPlayer.load();
+        });
 
-        audioPlayer.oncanplay = () => {
-            console.log('音頻可以開始播放');
-        };
-
-        audioPlayer.onplay = () => {
-            speaking = true;
-            console.log('開始播放音頻');
-        };
-
+        // 播放完成後的處理
         audioPlayer.onended = () => {
-            speaking = false;
-            console.log('音頻播放完成');
             URL.revokeObjectURL(url);
-            // 音頻播放完成後，如果之前在錄音，則恢復錄音
-            if (currentSide) {
-                startRecording(currentSide);
+            speaking = false;
+            // 恢復錄音
+            if (tempSide) {
+                setTimeout(() => startRecording(tempSide), 300);
             }
         };
 
-        audioPlayer.onerror = (error) => {
-            speaking = false;
-            console.error('音頻播放錯誤:', error);
-            URL.revokeObjectURL(url);
-            // 發生錯誤時也嘗試恢復錄音
-            if (currentSide) {
-                startRecording(currentSide);
-            }
-        };
-
-        // 設置音頻源
-        audioPlayer.src = url;
-        
-        // 預加載音頻
-        await audioPlayer.load();
-        
-        // 嘗試自動播放
+        // 嘗試播放
         try {
+            document.body.classList.add('user-interacted'); // 標記用戶已交互
             await audioPlayer.play();
+            speaking = true;
         } catch (error) {
             console.error('自動播放失敗，提供播放按鈕:', error);
             
-            // 創建播放按鈕
             const playButton = document.createElement('button');
             playButton.className = 'btn btn-primary mt-2';
             playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+            
             playButton.onclick = async () => {
                 try {
                     await audioPlayer.play();
+                    speaking = true;
                     playButton.remove();
                 } catch (err) {
                     console.error('手動播放失敗:', err);
                 }
             };
             
-            // 將按鈕添加到最新的聊天氣泡旁
             const chatBubbles = document.getElementsByClassName('chat-bubble');
             if (chatBubbles.length > 0) {
-                const latestBubble = chatBubbles[0];
-                latestBubble.appendChild(playButton);
+                chatBubbles[0].appendChild(playButton);
+            }
+            
+            // 即使播放失敗也恢復錄音
+            if (tempSide) {
+                setTimeout(() => startRecording(tempSide), 300);
             }
         }
     } catch (error) {
         console.error('TTS 處理錯誤:', error);
         speaking = false;
-        // 發生錯誤時嘗試恢復錄音
+        // 發生錯誤時恢復錄音
         if (currentSide) {
-            startRecording(currentSide);
+            setTimeout(() => startRecording(currentSide), 300);
         }
     }
 }
