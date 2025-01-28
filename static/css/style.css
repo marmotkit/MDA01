@@ -335,3 +335,21 @@ select {
 .mute-switch input[type="checkbox"]:checked::before {
     transform: translateX(20px);
 }
+
+.btn-mute {
+    padding: 5px 10px;
+    margin-left: 5px;
+    border: none;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.btn-mute:hover {
+    background-color: #e0e0e0;
+}
+
+.btn-mute:active {
+    background-color: #d0d0d0;
+}
