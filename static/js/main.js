@@ -146,7 +146,26 @@ function startRecording(side) {
             document.getElementById('rightLanguage').value;
 
         recognition.lang = sourceLang;
-        recognition.start();
+        
+        // 添加延遲以確保之前的錄音已完全停止
+        setTimeout(() => {
+            try {
+                recognition.start();
+                console.log('開始新的錄音');
+            } catch (error) {
+                console.error('開始錄音失敗:', error);
+                // 如果啟動失敗，等待一段時間後重試
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                        console.log('重試開始錄音');
+                    } catch (retryError) {
+                        console.error('重試錄音失敗:', retryError);
+                        showSpeechWarning('語音輸入啟動失敗，請重新點擊麥克風按鈕');
+                    }
+                }, 1000);
+            }
+        }, 100);
     }
 }
 
@@ -275,81 +294,61 @@ async function speakText(text, lang) {
             speaking = false;
             console.log('音頻播放完成');
             URL.revokeObjectURL(url);
+            // 音頻播放完成後，如果之前在錄音，則恢復錄音
+            if (currentSide) {
+                startRecording(currentSide);
+            }
         };
 
         audioPlayer.onerror = (error) => {
             speaking = false;
             console.error('音頻播放錯誤:', error);
             URL.revokeObjectURL(url);
+            // 發生錯誤時也嘗試恢復錄音
+            if (currentSide) {
+                startRecording(currentSide);
+            }
         };
 
         // 設置音頻源
         audioPlayer.src = url;
         
-        // iOS Safari 特殊處理
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            console.log('檢測到 iOS 設備，使用特殊播放邏輯');
-            
-            // 預加載音頻
-            await audioPlayer.load();
-            
-            // 嘗試播放
-            try {
-                // 使用 Promise 包裝播放操作
-                await new Promise((resolve, reject) => {
-                    // 設置超時檢查
-                    const timeoutId = setTimeout(() => {
-                        reject(new Error('播放超時'));
-                    }, 3000);
-
-                    // 監聽播放開始事件
-                    const playStarted = () => {
-                        clearTimeout(timeoutId);
-                        resolve();
-                    };
-
-                    audioPlayer.addEventListener('playing', playStarted, { once: true });
-                    
-                    // 嘗試播放
-                    const playPromise = audioPlayer.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => {
-                            clearTimeout(timeoutId);
-                            console.error('播放失敗，等待用戶交互:', error);
-                            
-                            // 創建播放按鈕
-                            const playButton = document.createElement('button');
-                            playButton.className = 'btn btn-primary mt-2';
-                            playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
-                            playButton.onclick = async () => {
-                                try {
-                                    await audioPlayer.play();
-                                    playButton.remove();
-                                } catch (err) {
-                                    console.error('手動播放失敗:', err);
-                                }
-                            };
-                            
-                            // 將按鈕添加到最新的聊天氣泡旁
-                            const chatBubbles = document.getElementsByClassName('chat-bubble');
-                            if (chatBubbles.length > 0) {
-                                const latestBubble = chatBubbles[0];
-                                latestBubble.appendChild(playButton);
-                            }
-                        });
-                    }
-                });
-            } catch (error) {
-                console.error('iOS 播放失敗:', error);
-            }
-        } else {
-            // 非 iOS 設備直接播放
-            console.log('非 iOS 設備，直接播放');
+        // 預加載音頻
+        await audioPlayer.load();
+        
+        // 嘗試自動播放
+        try {
             await audioPlayer.play();
+        } catch (error) {
+            console.error('自動播放失敗，提供播放按鈕:', error);
+            
+            // 創建播放按鈕
+            const playButton = document.createElement('button');
+            playButton.className = 'btn btn-primary mt-2';
+            playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放音頻';
+            playButton.onclick = async () => {
+                try {
+                    await audioPlayer.play();
+                    playButton.remove();
+                } catch (err) {
+                    console.error('手動播放失敗:', err);
+                }
+            };
+            
+            // 將按鈕添加到最新的聊天氣泡旁
+            const chatBubbles = document.getElementsByClassName('chat-bubble');
+            if (chatBubbles.length > 0) {
+                const latestBubble = chatBubbles[0];
+                latestBubble.appendChild(playButton);
+            }
         }
     } catch (error) {
         console.error('TTS 處理錯誤:', error);
         speaking = false;
+        // 發生錯誤時嘗試恢復錄音
+        if (currentSide) {
+            startRecording(currentSide);
+        }
     }
 }
 
