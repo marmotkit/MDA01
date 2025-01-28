@@ -44,9 +44,6 @@ function handleRecognitionResult(event) {
         const targetLang = activeSection.querySelector('.language-select').value;
         const isTopSection = activeSection.classList.contains('top-section');
         
-        // 在自己的聊天框顯示原文
-        addChatBubble(finalTranscript, 'right', false, isTopSection ? '.top-section' : '.bottom-section');
-        
         // 自動停止錄音
         stopRecording();
         
@@ -141,6 +138,12 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         
         // 在對方的聊天框顯示翻譯
         const listenerSection = isTopSection ? '.bottom-section' : '.top-section';
+        const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
+        
+        // 在說話者的聊天框顯示原文
+        addChatBubble(text, 'right', false, speakerSection);
+        
+        // 在聽者的聊天框顯示翻譯
         addChatBubble(data.translated_text, 'left', false, listenerSection);
         
         // 更新對應區域的播放按鈕
@@ -200,7 +203,7 @@ function updatePlayButton(sectionSelector, audioUrl) {
         currentAudio = audio;
         
         // 設置音頻事件處理
-        audio.onloadeddata = () => {
+        audio.addEventListener('loadeddata', () => {
             console.log('音頻數據已加載');
             // 使用 play() 方法返回的 Promise
             audio.play().then(() => {
@@ -210,25 +213,25 @@ function updatePlayButton(sectionSelector, audioUrl) {
                 playButton.textContent = '重新播放';
                 playButton.disabled = false;
             });
-        };
+        });
 
-        audio.onplay = () => {
+        audio.addEventListener('play', () => {
             console.log('音頻開始播放');
             playButton.textContent = '播放中...';
             playButton.disabled = true;
-        };
+        });
 
-        audio.onended = () => {
+        audio.addEventListener('ended', () => {
             console.log('音頻播放完成');
             playButton.textContent = '重新播放';
             playButton.disabled = false;
-        };
+        });
 
-        audio.onerror = (error) => {
+        audio.addEventListener('error', (error) => {
             console.error('音頻加載失敗:', error);
             playButton.textContent = '重新播放';
             playButton.disabled = false;
-        };
+        });
 
         // 設置播放按鈕點擊事件
         playButton.onclick = async () => {
@@ -245,20 +248,28 @@ function updatePlayButton(sectionSelector, audioUrl) {
                 const newAudio = new Audio(currentAudioUrl);
                 currentAudio = newAudio;
 
-                // 等待音頻加載完成
-                await new Promise((resolve, reject) => {
-                    newAudio.onloadeddata = resolve;
-                    newAudio.onerror = reject;
+                // 設置事件監聽器
+                newAudio.addEventListener('loadeddata', () => {
+                    newAudio.play().catch(error => {
+                        console.error('重新播放失敗:', error);
+                        playButton.textContent = '重新播放';
+                        playButton.disabled = false;
+                    });
                 });
 
-                // 播放音頻
-                await newAudio.play();
-
-                // 設置事件處理器
-                newAudio.onended = () => {
+                newAudio.addEventListener('ended', () => {
                     playButton.textContent = '重新播放';
                     playButton.disabled = false;
-                };
+                });
+
+                newAudio.addEventListener('error', () => {
+                    console.error('音頻加載失敗');
+                    playButton.textContent = '重新播放';
+                    playButton.disabled = false;
+                });
+
+                // 開始加載音頻
+                newAudio.load();
 
             } catch (error) {
                 console.error('播放按鈕點擊處理錯誤:', error);
