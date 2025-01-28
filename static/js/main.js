@@ -221,30 +221,85 @@ function createPlayButton(text, lang, container) {
     playButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 準備播放...';
     
     let hasPlayed = false;
+    let audioContext = null;
+    let audioBuffer = null;
     
     const playAudio = async () => {
         try {
             playButton.disabled = true;
             playButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 播放中...';
             
-            await speakText(text, lang);
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                await audioContext.resume();
+            }
             
-            hasPlayed = true;
-            playButton.disabled = false;
-            playButton.innerHTML = '<i class="fas fa-play"></i> 重新播放';
+            const response = await fetch('/tts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    lang: lang
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`TTS 請求失敗: ${response.status}`);
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            
+            // 播放完成後的處理
+            source.onended = () => {
+                console.log('音頻播放完成');
+                playButton.disabled = false;
+                playButton.innerHTML = '<i class="fas fa-play"></i> 重新播放';
+                hasPlayed = true;
+            };
+            
+            // 開始播放
+            source.start(0);
+            console.log('音頻開始播放');
+            
         } catch (err) {
             console.error('播放失敗:', err);
             playButton.disabled = false;
             playButton.innerHTML = '<i class="fas fa-play"></i> 重新播放';
+            hasPlayed = true;
         }
     };
     
     playButton.onclick = playAudio;
     
     // 自動播放
-    setTimeout(() => {
+    setTimeout(async () => {
         if (!hasPlayed) {
-            playAudio();
+            try {
+                // 檢查是否支援自動播放
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                await audioContext.resume();
+                
+                // 創建一個短暫的無聲音頻
+                const buffer = audioContext.createBuffer(1, 1, 22050);
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioContext.destination);
+                source.start(0);
+                source.stop(0.001);
+                
+                // 如果成功播放無聲音頻，則嘗試播放實際音頻
+                await playAudio();
+            } catch (error) {
+                console.log('自動播放受限，需要用戶交互:', error);
+                playButton.innerHTML = '<i class="fas fa-play"></i> 點擊播放';
+            }
         }
     }, 100);
     
