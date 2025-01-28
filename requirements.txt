@@ -2,5 +2,5 @@ flask==3.0.0
 openai==0.28.1
 python-dotenv==1.0.0
 gunicorn==21.2.0
-azure-cognitiveservices-speech==1.32.1
+requests==2.31.0
 Werkzeug==3.0.1

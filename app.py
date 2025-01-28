@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
-import azure.cognitiveservices.speech as speechsdk
+import requests
+import xml.etree.ElementTree as ET
 import tempfile
 
 app = Flask(__name__)
@@ -118,19 +119,6 @@ def text_to_speech():
         text = data.get('text', '')
         lang = data.get('lang', 'en')
 
-        # 創建臨時文件
-        temp_dir = tempfile.gettempdir()
-        temp_file = os.path.join(temp_dir, 'speech.wav')
-
-        # 設置 Azure 語音配置
-        speech_config = speechsdk.SpeechConfig(
-            subscription=os.getenv('AZURE_SPEECH_KEY'),
-            region=os.getenv('AZURE_SPEECH_REGION')
-        )
-
-        # 設置音頻輸出配置
-        audio_config = speechsdk.audio.AudioOutputConfig(filename=temp_file)
-
         # 根據語言選擇合適的語音
         voice_name = {
             'zh': 'zh-CN-XiaoxiaoNeural',
@@ -151,27 +139,46 @@ def text_to_speech():
             'ms': 'ms-MY-YasminNeural'
         }.get(lang.split('-')[0], 'en-US-JennyNeural')
 
-        speech_config.speech_synthesis_voice_name = voice_name
+        # 準備 SSML
+        ssml = f"""<?xml version="1.0" encoding="UTF-8"?>
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{lang}">
+            <voice name="{voice_name}">
+                {text}
+            </voice>
+        </speak>"""
 
-        # 創建語音合成器
-        synthesizer = speechsdk.SpeechSynthesizer(
-            speech_config=speech_config, 
-            audio_config=audio_config
-        )
+        # Azure TTS endpoint
+        endpoint = f"https://{os.getenv('AZURE_SPEECH_REGION')}.tts.speech.microsoft.com/cognitiveservices/v1"
+        
+        # 設置請求頭
+        headers = {
+            'Ocp-Apim-Subscription-Key': os.getenv('AZURE_SPEECH_KEY'),
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3'
+        }
 
-        # 合成語音
-        result = synthesizer.speak_text_async(text).get()
+        # 發送請求
+        response = requests.post(endpoint, headers=headers, data=ssml.encode('utf-8'))
+        
+        if response.status_code == 200:
+            # 創建臨時文件
+            temp_dir = tempfile.gettempdir()
+            temp_file = os.path.join(temp_dir, 'speech.mp3')
+            
+            # 保存音頻
+            with open(temp_file, 'wb') as f:
+                f.write(response.content)
 
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            # 返回音頻文件
+            # 返回音頻
             return send_file(
                 temp_file,
-                mimetype='audio/wav',
+                mimetype='audio/mpeg',
                 as_attachment=True,
-                download_name='speech.wav'
+                download_name='speech.mp3'
             )
         else:
-            return jsonify({'error': '語音合成失敗'}), 500
+            print(f"TTS API error: {response.status_code} - {response.text}")
+            return jsonify({'error': f'TTS API error: {response.status_code}'}), 500
 
     except Exception as e:
         print(f"TTS error: {str(e)}")
