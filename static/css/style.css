@@ -149,7 +149,7 @@ select {
 .play-button-container {
     position: absolute;
     right: 20px;
-    top: 20px;
+    bottom: 20px;
     background: white;
     padding: 10px;
     border-radius: 10px;
@@ -159,6 +159,8 @@ select {
 
 .top-section .play-button-container {
     transform: rotate(180deg);
+    top: 20px;
+    bottom: auto;
 }
 
 /* 播放按鈕樣式 */
@@ -220,6 +222,10 @@ select {
     
     .play-button-container {
         right: 15px;
+        bottom: 15px;
+    }
+    
+    .top-section .play-button-container {
         top: 15px;
     }
     
