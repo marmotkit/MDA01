@@ -16,6 +16,33 @@ let userInteracted = false;
 // 添加全局變量
 let isMuted = true;  // 默認靜音
 
+// 初始化音頻上下文
+async function initAudioContext() {
+    try {
+        if (!audioContext || audioContext.state === 'closed') {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+        console.log('音頻上下文已初始化並解除暫停，狀態:', audioContext.state);
+        return true;
+    } catch (error) {
+        console.error('音頻上下文初始化失敗:', error);
+        return false;
+    }
+}
+
+// 在用戶首次交互時初始化音頻
+async function initOnUserInteraction(event) {
+    userInteracted = true;
+    await initAudioContext();
+    // 移除所有事件監聽器
+    document.removeEventListener('click', initOnUserInteraction);
+    document.removeEventListener('touchstart', initOnUserInteraction);
+    document.removeEventListener('keydown', initOnUserInteraction);
+}
+
 // 初始化語音識別
 function initSpeechRecognition(targetLang) {
     try {
@@ -469,33 +496,6 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
 
 // 初始化頁面
 document.addEventListener('DOMContentLoaded', () => {
-    // 初始化音頻上下文並解除自動播放限制
-    const initAudioContext = async () => {
-        try {
-            if (!audioContext || audioContext.state === 'closed') {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume();
-            }
-            console.log('音頻上下文已初始化並解除暫停，狀態:', audioContext.state);
-            return true;
-        } catch (error) {
-            console.error('音頻上下文初始化失敗:', error);
-            return false;
-        }
-    };
-
-    // 在用戶首次交互時初始化音頻
-    const initOnUserInteraction = async (event) => {
-        userInteracted = true;
-        await initAudioContext();
-        // 移除所有事件監聽器
-        document.removeEventListener('click', initOnUserInteraction);
-        document.removeEventListener('touchstart', initOnUserInteraction);
-        document.removeEventListener('keydown', initOnUserInteraction);
-    };
-
     // 添加多種用戶交互事件監聽
     document.addEventListener('click', initOnUserInteraction);
     document.addEventListener('touchstart', initOnUserInteraction);
