@@ -1,200 +1,168 @@
-# 多語言翻譯助手 (Multilingual Translation Assistant)
+# 面對面翻譯助手 (Face-to-Face Translator)
 
-這是一個基於 Flask 的網頁應用，提供即時多語言翻譯和語音合成功能。使用 OpenAI 的 GPT 模型進行翻譯，並使用 Azure 的語音服務進行文字轉語音 (TTS)。
+一個基於網頁的即時語音翻譯應用，支持多種語言之間的即時語音對話翻譯。
 
 ## 功能特點
 
-- 支援多語言翻譯
-  - 中文（繁體/簡體）
-  - 英文
-  - 日文
-  - 韓文
-  - 法文
-  - 德文
-  - 西班牙文
-  - 義大利文
-  - 俄文
-  - 葡萄牙文
-  - 阿拉伯文
-  - 印地文
-  - 泰文
-  - 越南文
-  - 印尼文
-  - 馬來文
+### 1. 語音翻譯
+- 支持即時語音輸入和識別
+- 自動翻譯並朗讀翻譯結果
+- 支持多種語言之間的互譯
+- 語音輸入時提供視覺反饋
 
-- 即時語音合成
-  - 使用 Azure 神經網路語音合成
-  - 每種語言都有專屬的自然語音
-  - 支援跨平台播放（包括 iOS Safari）
+### 2. 支持的語言
+- 中文（台灣）
+- 漢語（中國）
+- 粵語（香港）
+- English（英語）
+- 日本語（日語）
+- 한국어（韓語）
+- ภาษาไทย（泰語）
+- Tiếng Việt（越南語）
+- Français（法語）
+- Español（西班牙語）
 
-- 響應式設計
-  - 適配桌面和移動設備
-  - 直觀的用戶界面
+### 3. 用戶界面
+- 直觀的分屏設計，適合面對面交談
+- 深色/淺色主題切換
+- 響應式設計，支持各種設備
+- 清晰的語音狀態指示
+- 對話歷史記錄
 
-## 技術棧
+### 4. PWA 支持
+- 可安裝為本地應用
+- 離線功能支持
+- 主屏幕快捷方式
 
-### 後端
-- Python 3.9+
-- Flask：Web 框架
-- OpenAI API：GPT 模型翻譯
-- Azure Cognitive Services：語音合成
-- Gunicorn：WSGI HTTP 服務器
+## 技術依賴
 
 ### 前端
 - HTML5
 - CSS3
-- JavaScript (純原生，無框架依賴)
-- 響應式設計
+- JavaScript (ES6+)
+- Web Speech API
+- Service Workers (PWA)
 
-## 部署指南
+### 後端
+- Python 3.8+
+- Flask 2.0+
+- OpenAI Whisper（語音識別）
+- Google Cloud Text-to-Speech
+- Google Cloud Translate
 
-### 前置需求
+### 系統要求
+- 現代瀏覽器（Chrome 推薦）
+- 麥克風權限
+- 網絡連接
+- Python 3.8 或更高版本
 
-1. Python 3.9 或更高版本
-2. OpenAI API 密鑰
-3. Azure 語音服務密鑰和區域設置
-4. Git
+## 安裝部署
 
-### 本地部署
-
-1. 克隆倉庫：
+### 1. 環境準備
 ```bash
-git clone https://github.com/your-username/translator.git
-cd translator
-```
+# 克隆代碼庫
+git clone https://github.com/marmotkit/MDA01.git
+cd MDA01
 
-2. 創建並激活虛擬環境：
-```bash
+# 創建虛擬環境
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
-```
 
-3. 安裝依賴：
-```bash
+# 安裝依賴
 pip install -r requirements.txt
 ```
 
-4. 設置環境變量：
-創建 `.env` 文件並添加以下內容：
+### 2. 配置環境變量
+創建 `.env` 文件並設置以下變量：
 ```
+GOOGLE_APPLICATION_CREDENTIALS=path/to/your/credentials.json
 OPENAI_API_KEY=your_openai_api_key
-AZURE_SPEECH_KEY=your_azure_speech_key
-AZURE_SPEECH_REGION=your_azure_region
 ```
 
-5. 運行應用：
+### 3. 啟動應用
 ```bash
 python app.py
 ```
+應用將在 http://localhost:5000 運行
 
-訪問 http://localhost:10000 即可使用應用。
+### 4. 生產環境部署
+推薦使用 Gunicorn 和 Nginx：
+```bash
+# 安裝 Gunicorn
+pip install gunicorn
 
-### Render 部署
+# 啟動服務
+gunicorn -w 4 -b 127.0.0.1:5000 app:app
+```
 
-1. 在 Render.com 創建帳號並連接 GitHub 倉庫
+## 使用說明
 
-2. 創建新的 Web Service，選擇你的倉庫
+1. 打開應用後，選擇上下兩個區域的目標語言
+2. 點擊「開始對話」按鈕開始錄音
+3. 說話完成後自動停止錄音並進行翻譯
+4. 翻譯完成後自動播放翻譯結果
+5. 可以點擊清除按鈕清空對話歷史
 
-3. 配置以下設置：
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn app:app`
-   - Python Version: 3.9 或更高
+## 安全性考慮
 
-4. 添加環境變量：
-   - `OPENAI_API_KEY`
-   - `AZURE_SPEECH_KEY`
-   - `AZURE_SPEECH_REGION`
+- 所有音頻數據均使用 HTTPS 傳輸
+- 不保存用戶的語音數據
+- 遵循瀏覽器的安全策略
+- 需要用戶明確授權麥克風權限
 
-5. 點擊 "Create Web Service"
+## 瀏覽器兼容性
 
-部署完成後，Render 會提供一個域名，可以通過該域名訪問應用。
-
-## 環境變量說明
-
-- `OPENAI_API_KEY`：OpenAI API 密鑰，用於訪問 GPT 模型
-- `AZURE_SPEECH_KEY`：Azure 語音服務密鑰
-- `AZURE_SPEECH_REGION`：Azure 語音服務區域（如 'eastasia'）
+- Chrome 70+（推薦）
+- Firefox 65+
+- Safari 12+
+- Edge 79+
 
 ## 開發指南
 
-### 項目結構
+### 代碼結構
 ```
-translator/
+MDA01/
 ├── app.py              # Flask 應用主文件
-├── static/
-│   ├── css/
-│   │   └── style.css  # 樣式表
-│   └── js/
-│       └── main.js    # 前端 JavaScript
-├── templates/
-│   └── index.html     # 主頁面模板
 ├── requirements.txt    # Python 依賴
-├── gunicorn.conf.py   # Gunicorn 配置
-└── .env              # 環境變量（不納入版本控制）
+├── static/
+│   ├── css/           # 樣式文件
+│   ├── js/            # JavaScript 文件
+│   └── icons/         # PWA 圖標
+├── templates/         # HTML 模板
+└── .env              # 環境變量
 ```
 
-### API 端點
+### 開發模式運行
+```bash
+export FLASK_ENV=development
+export FLASK_APP=app.py
+flask run
+```
 
-#### POST /translate
-翻譯文本
-- 請求體：
-  ```json
-  {
-    "text": "要翻譯的文本",
-    "from": "源語言代碼",
-    "to": "目標語言代碼"
-  }
-  ```
-- 響應：
-  ```json
-  {
-    "translation": "翻譯後的文本"
-  }
-  ```
-
-#### POST /tts
-文字轉語音
-- 請求體：
-  ```json
-  {
-    "text": "要轉換的文本",
-    "lang": "語言代碼"
-  }
-  ```
-- 響應：音頻文件 (audio/mpeg)
-
-## 故障排除
+## 問題排解
 
 ### 常見問題
+1. 麥克風無法使用
+   - 檢查瀏覽器權限設置
+   - 確認系統麥克風設備正常
 
-1. 音頻無法播放
-   - 確保瀏覽器支援 HTML5 音頻
-   - 檢查是否允許瀏覽器播放音頻
-   - iOS Safari 需要用戶交互才能播放音頻
-
-2. 翻譯失敗
-   - 檢查 OpenAI API 密鑰是否正確
-   - 確認 API 配額是否足夠
-
-3. 語音合成失敗
-   - 驗證 Azure 語音服務密鑰和區域設置
+2. 翻譯服務無響應
    - 檢查網絡連接
+   - 確認 API 密鑰配置正確
 
-## 授權
+3. 音頻無法播放
+   - 檢查設備音量設置
+   - 確認瀏覽器音頻權限
 
-MIT License
+## 版本歷史
 
-## 貢獻
+- v3.8: 優化界面佈局，改進用戶體驗
+- v3.7: 添加多語言支持
+- v3.6: 實現 PWA 功能
+- v3.5: 優化語音識別準確度
+- v3.0: 重構核心功能
 
-歡迎提交 Issue 和 Pull Request！
+## 授權協議
 
-## 作者
-
-[Your Name]
-
-## 致謝
-
-- OpenAI GPT
-- Azure Cognitive Services
-- Flask Team
+版權所有 © 2024 KT. Liang
