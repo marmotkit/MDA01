@@ -35,12 +35,22 @@ async function initAudioContext() {
 
 // 在用戶首次交互時初始化音頻
 async function initOnUserInteraction(event) {
+    console.log('用戶交互事件觸發:', event.type);
     userInteracted = true;
+    isMuted = false;  // 用戶交互後取消靜音
     await initAudioContext();
+    
+    // 更新所有靜音按鈕的顯示
+    document.querySelectorAll('.btn-mute').forEach(btn => {
+        btn.textContent = isMuted ? '🔇' : '🔊';
+    });
+    
     // 移除所有事件監聽器
     document.removeEventListener('click', initOnUserInteraction);
     document.removeEventListener('touchstart', initOnUserInteraction);
     document.removeEventListener('keydown', initOnUserInteraction);
+    
+    console.log('音頻初始化完成，已取消靜音');
 }
 
 // 初始化語音識別
@@ -341,17 +351,37 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
 // 修改音頻播放邏輯
 async function playAudio(audio, listenerSection) {
     try {
-        console.log('開始播放音頻');
-        audio.volume = 1.0;  // 確保音量正常
-        audio.muted = false; // 確保不是靜音狀態
+        console.log('開始播放音頻，當前狀態:', {
+            userInteracted,
+            isMuted,
+            audioContext: audioContext?.state
+        });
+
+        // 如果用戶還沒有交互，嘗試觸發一次交互初始化
+        if (!userInteracted) {
+            await initOnUserInteraction({ type: 'system' });
+        }
+
+        // 確保音頻上下文是活動的
+        await initAudioContext();
         
+        // 設置音頻屬性
+        audio.volume = 1.0;
+        audio.muted = false;
+        
+        // 嘗試播放
         await audio.play();
         console.log('音頻開始播放');
         updatePlayButtonState(listenerSection, '播放中...', true);
         
     } catch (error) {
         console.error('音頻播放失敗:', error);
-        updatePlayButtonState(listenerSection, '重新播放', false);
+        if (error.name === 'NotAllowedError') {
+            console.log('瀏覽器阻止了自動播放，等待用戶交互...');
+            updatePlayButtonState(listenerSection, '點擊播放', false);
+        } else {
+            updatePlayButtonState(listenerSection, '重新播放', false);
+        }
         currentAudio = null;
     }
 }
