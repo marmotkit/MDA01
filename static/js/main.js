@@ -371,10 +371,12 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                         currentAudio = null;
                     });
 
+                    // 播放音頻前先更新按鈕狀態
+                    updateButtonState(button, 'playing', isTopSectionButton);
+                    
                     // 播放音頻
                     await audio.play();
                     console.log('音頻開始播放');
-                    updateButtonState(button, 'playing', isTopSectionButton);
 
                 } catch (error) {
                     console.error('音頻處理失敗:', error);
@@ -408,6 +410,12 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
 
 // 初始化頁面
 document.addEventListener('DOMContentLoaded', () => {
+    // 設置默認語言
+    document.querySelectorAll('.language-select').forEach(select => {
+        const isTopSection = select.closest('.split-section').classList.contains('top-section');
+        select.value = isTopSection ? 'en-US' : 'zh-TW';
+    });
+
     // 添加多種用戶交互事件監聽
     document.addEventListener('click', initOnUserInteraction);
     document.addEventListener('touchstart', initOnUserInteraction);
