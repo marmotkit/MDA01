@@ -13,9 +13,6 @@ let bottomSectionPlayButton = null;
 let autoplayEnabled = false;
 let userInteracted = false;
 
-// 添加全局變量
-let isMuted = true;  // 默認靜音
-
 // 初始化音頻上下文
 async function initAudioContext() {
     try {
@@ -37,20 +34,14 @@ async function initAudioContext() {
 async function initOnUserInteraction(event) {
     console.log('用戶交互事件觸發:', event.type);
     userInteracted = true;
-    isMuted = false;  // 用戶交互後取消靜音
     await initAudioContext();
-    
-    // 更新所有靜音按鈕的顯示
-    document.querySelectorAll('.btn-mute').forEach(btn => {
-        btn.textContent = isMuted ? '🔇' : '🔊';
-    });
     
     // 移除所有事件監聽器
     document.removeEventListener('click', initOnUserInteraction);
     document.removeEventListener('touchstart', initOnUserInteraction);
     document.removeEventListener('keydown', initOnUserInteraction);
     
-    console.log('音頻初始化完成，已取消靜音');
+    console.log('音頻初始化完成');
 }
 
 // 初始化語音識別
@@ -509,8 +500,21 @@ function addChatBubble(text, position, isTranslated, sectionSelector) {
     return bubble;
 }
 
-// 初始化頁面
-document.addEventListener('DOMContentLoaded', () => {
+// 提前請求麥克風權限
+async function requestMicrophonePermission() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());  // 立即停止使用麥克風
+        console.log('已獲得麥克風權限');
+        return true;
+    } catch (error) {
+        console.error('獲取麥克風權限失敗:', error);
+        return false;
+    }
+}
+
+// 修改初始化頁面的代碼
+document.addEventListener('DOMContentLoaded', async () => {
     // 設置默認語言
     document.querySelectorAll('.language-select').forEach(select => {
         const isTopSection = select.closest('.split-section').classList.contains('top-section');
@@ -540,27 +544,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 添加靜音按鈕到每個控制面板
-    document.querySelectorAll('.control-panel').forEach(panel => {
-        const muteButton = document.createElement('button');
-        muteButton.className = 'btn btn-mute';
-        muteButton.textContent = isMuted ? '🔇' : '🔊';
-        muteButton.onclick = toggleMute;
-        panel.insertBefore(muteButton, panel.querySelector('.btn-record'));
-    });
+    // 嘗試提前獲取麥克風權限
+    await requestMicrophonePermission();
 });
-
-// 切換靜音狀態
-function toggleMute() {
-    isMuted = !isMuted;
-    // 更新所有靜音按鈕的顯示
-    document.querySelectorAll('.btn-mute').forEach(btn => {
-        btn.textContent = isMuted ? '🔇' : '🔊';
-    });
-    
-    // 如果當前有音頻在播放，更新其靜音狀態
-    if (currentAudio) {
-        currentAudio.muted = isMuted;
-        currentAudio.volume = isMuted ? 0 : 1.0;
-    }
-}
