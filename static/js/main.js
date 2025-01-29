@@ -369,22 +369,10 @@ async function playAudio(button, isTopSection) {
             currentAudio = null;
         }
 
-        // 更新按鈕狀態為加載中
-        updateButtonState(button, 'translating', isTopSection);
-
         try {
-            // 使用 fetch 下載音頻文件
-            const response = await fetch(currentAudioUrl);
-            if (!response.ok) {
-                throw new Error(`音頻下載失敗: ${response.status}`);
-            }
-
-            // 將響應轉換為 blob
-            const audioBlob = await response.blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
-
             // 創建新的音頻對象
-            const audio = new Audio();
+            const audio = new Audio(currentAudioUrl);
+            currentAudio = audio;
             
             // 設置音頻事件監聽器
             audio.addEventListener('canplay', () => {
@@ -400,24 +388,12 @@ async function playAudio(button, isTopSection) {
                 console.log('音頻播放結束');
                 updateButtonState(button, 'choice', isTopSection);
                 currentAudio = null;
-                URL.revokeObjectURL(audioUrl);  // 釋放 URL
             });
 
             audio.addEventListener('error', (e) => {
                 console.error('音頻播放錯誤:', e);
                 updateButtonState(button, 'choice', isTopSection);
                 currentAudio = null;
-                URL.revokeObjectURL(audioUrl);  // 釋放 URL
-            });
-
-            // 設置音頻源
-            audio.src = audioUrl;
-            currentAudio = audio;
-
-            // 等待音頻加載完成
-            await new Promise((resolve, reject) => {
-                audio.addEventListener('canplaythrough', resolve, { once: true });
-                audio.addEventListener('error', reject, { once: true });
             });
 
             // 播放音頻
