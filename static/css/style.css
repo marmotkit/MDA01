@@ -375,9 +375,11 @@ select {
 /* 選擇按鈕容器 */
 .choice-buttons {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     margin-left: 8px;
     flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
 }
 
 /* 選擇按鈕樣式 */
@@ -389,8 +391,12 @@ select {
     cursor: pointer;
     font-size: 1em;
     transition: all 0.3s ease;
-    min-width: 100px;
+    min-width: 120px;
     height: 40px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .play-choice {
@@ -416,8 +422,11 @@ select {
 /* 修改按鈕狀態樣式 */
 .btn-record.choice {
     background-color: #f8f9fa;
-    padding: 8px 12px;
-    min-width: 200px;
+    padding: 8px 16px;
+    min-width: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-record.playing {
