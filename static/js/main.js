@@ -369,46 +369,69 @@ async function playAudio(button, isTopSection) {
             currentAudio = null;
         }
 
-        // 創建新的音頻對象
-        const audio = new Audio();
-        
-        // 設置音頻事件監聽器
-        audio.addEventListener('canplay', () => {
-            console.log('音頻已準備好播放');
-            updateButtonState(button, 'playing', isTopSection);
-        });
-
-        audio.addEventListener('playing', () => {
-            console.log('音頻開始播放');
-        });
-
-        audio.addEventListener('ended', () => {
-            console.log('音頻播放結束');
-            updateButtonState(button, 'choice', isTopSection);
-            currentAudio = null;
-        });
-
-        audio.addEventListener('error', (e) => {
-            console.error('音頻播放錯誤:', e);
-            updateButtonState(button, 'choice', isTopSection);
-            currentAudio = null;
-        });
-
-        // 設置音頻源並開始加載
-        audio.src = currentAudioUrl;
-        currentAudio = audio;
+        // 更新按鈕狀態為加載中
+        updateButtonState(button, 'translating', isTopSection);
 
         try {
-            // 嘗試播放
+            // 使用 fetch 下載音頻文件
+            const response = await fetch(currentAudioUrl);
+            if (!response.ok) {
+                throw new Error(`音頻下載失敗: ${response.status}`);
+            }
+
+            // 將響應轉換為 blob
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            // 創建新的音頻對象
+            const audio = new Audio();
+            
+            // 設置音頻事件監聽器
+            audio.addEventListener('canplay', () => {
+                console.log('音頻已準備好播放');
+                updateButtonState(button, 'playing', isTopSection);
+            });
+
+            audio.addEventListener('playing', () => {
+                console.log('音頻開始播放');
+            });
+
+            audio.addEventListener('ended', () => {
+                console.log('音頻播放結束');
+                updateButtonState(button, 'choice', isTopSection);
+                currentAudio = null;
+                URL.revokeObjectURL(audioUrl);  // 釋放 URL
+            });
+
+            audio.addEventListener('error', (e) => {
+                console.error('音頻播放錯誤:', e);
+                updateButtonState(button, 'choice', isTopSection);
+                currentAudio = null;
+                URL.revokeObjectURL(audioUrl);  // 釋放 URL
+            });
+
+            // 設置音頻源
+            audio.src = audioUrl;
+            currentAudio = audio;
+
+            // 等待音頻加載完成
+            await new Promise((resolve, reject) => {
+                audio.addEventListener('canplaythrough', resolve, { once: true });
+                audio.addEventListener('error', reject, { once: true });
+            });
+
+            // 播放音頻
             await audio.play();
+            console.log('音頻開始播放');
+
         } catch (error) {
             console.error('播放失敗:', error);
+            updateButtonState(button, 'choice', isTopSection);
             if (error.name === 'NotAllowedError') {
                 alert('瀏覽器阻止了自動播放，請再次點擊播放按鈕。');
             } else {
                 alert('播放失敗: ' + error.message);
             }
-            updateButtonState(button, 'choice', isTopSection);
             currentAudio = null;
         }
 
