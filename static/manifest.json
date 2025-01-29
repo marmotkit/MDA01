@@ -1,0 +1,26 @@
+{
+    "name": "面對面翻譯助手",
+    "short_name": "翻譯助手",
+    "description": "即時語音翻譯與對話助手",
+    "start_url": "/",
+    "display": "fullscreen",
+    "background_color": "#f8f9fa",
+    "theme_color": "#2196F3",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "orientation": "portrait",
+    "categories": ["utilities", "productivity"],
+    "lang": "zh-TW"
+} 

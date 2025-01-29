@@ -547,3 +547,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 嘗試提前獲取麥克風權限
     await requestMicrophonePermission();
 });
+
+// 註冊 Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/js/sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful');
+            })
+            .catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
