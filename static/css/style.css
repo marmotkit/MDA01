@@ -73,22 +73,20 @@ body {
     min-height: 60px;
 }
 
-/* 按鈕基本樣式 */
-.btn {
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all var(--transition-speed) ease;
-    display: inline-flex;
+/* 控制面板左側容器 */
+.control-left {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 120px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-size: 0.9rem;
+    gap: 10px;
+    flex: 1;  /* 讓左側容器佔據剩餘空間 */
+}
+
+/* 錄音按鈕容器 */
+.btn-record-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;  /* 靠左對齊 */
+    flex: 1;
 }
 
 /* 錄音按鈕特殊樣式 */
@@ -187,6 +185,7 @@ select {
     transition: all var(--transition-speed) ease;
     width: 160px;
     height: 45px;
+    flex-shrink: 0;  /* 防止選擇器被壓縮 */
 }
 
 /* 聊天氣泡樣式 */
@@ -471,8 +470,8 @@ select {
     background: var(--button-bg);
     border: none;
     border-radius: 50%;
-    width: 38px;
-    height: 38px;
+    width: 45px;  /* 與其他元素高度一致 */
+    height: 45px;  /* 與其他元素高度一致 */
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -480,4 +479,5 @@ select {
     color: var(--text-color);
     transition: all 0.3s ease;
     font-size: 1.1em;
+    flex-shrink: 0;  /* 防止按鈕被壓縮 */
 }
