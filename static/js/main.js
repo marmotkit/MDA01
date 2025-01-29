@@ -224,10 +224,15 @@ function updateButtonState(button, state, isTopSection) {
             const playBtn = button.querySelector('.play-choice');
             const continueBtn = button.querySelector('.continue-choice');
             
-            playBtn.onclick = (e) => {
+            playBtn.onclick = async (e) => {
                 e.stopPropagation();  // 防止觸發按鈕的點擊事件
                 if (currentAudioUrl) {
-                    playAudio(button, isTopSection);
+                    try {
+                        await playAudio(button, isTopSection);
+                    } catch (error) {
+                        console.error('播放按鈕點擊處理錯誤:', error);
+                        updateButtonState(button, 'choice', isTopSection);
+                    }
                 }
             };
             
@@ -342,6 +347,12 @@ async function playAudio(button, isTopSection) {
             return;
         }
 
+        console.log('開始播放音頻:', {
+            currentAudioUrl,
+            buttonState: button.className,
+            isTopSection
+        });
+
         // 如果正在播放，則停止播放
         if (button.classList.contains('playing')) {
             if (currentAudio) {
@@ -352,11 +363,25 @@ async function playAudio(button, isTopSection) {
             return;
         }
 
-        // 創建新的音頻對象
-        const audio = new Audio(currentAudioUrl);
-        currentAudio = audio;
+        // 停止其他正在播放的音頻
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
 
-        // 設置音頻事件
+        // 創建新的音頻對象
+        const audio = new Audio();
+        
+        // 設置音頻事件監聽器
+        audio.addEventListener('canplay', () => {
+            console.log('音頻已準備好播放');
+            updateButtonState(button, 'playing', isTopSection);
+        });
+
+        audio.addEventListener('playing', () => {
+            console.log('音頻開始播放');
+        });
+
         audio.addEventListener('ended', () => {
             console.log('音頻播放結束');
             updateButtonState(button, 'choice', isTopSection);
@@ -369,16 +394,29 @@ async function playAudio(button, isTopSection) {
             currentAudio = null;
         });
 
-        // 更新按鈕狀態為播放中
-        updateButtonState(button, 'playing', isTopSection);
-        
-        // 播放音頻
-        await audio.play();
-        console.log('音頻開始播放');
+        // 設置音頻源並開始加載
+        audio.src = currentAudioUrl;
+        currentAudio = audio;
+
+        try {
+            // 嘗試播放
+            await audio.play();
+        } catch (error) {
+            console.error('播放失敗:', error);
+            if (error.name === 'NotAllowedError') {
+                alert('瀏覽器阻止了自動播放，請再次點擊播放按鈕。');
+            } else {
+                alert('播放失敗: ' + error.message);
+            }
+            updateButtonState(button, 'choice', isTopSection);
+            currentAudio = null;
+        }
 
     } catch (error) {
         console.error('音頻播放失敗:', error);
+        alert('音頻播放失敗: ' + error.message);
         updateButtonState(button, 'choice', isTopSection);
+        currentAudio = null;
     }
 }
 
