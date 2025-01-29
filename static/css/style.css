@@ -363,17 +363,20 @@ select {
     display: flex;
     gap: 8px;
     margin-left: 8px;
+    flex-direction: row;
 }
 
 /* 選擇按鈕樣式 */
 .play-choice,
 .continue-choice {
-    padding: 4px 12px;
+    padding: 6px 16px;
     border: none;
     border-radius: 15px;
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 0.95em;
     transition: all 0.3s ease;
+    min-width: 80px;
+    white-space: nowrap;
 }
 
 .play-choice {
@@ -399,7 +402,8 @@ select {
 /* 修改按鈕狀態樣式 */
 .btn-record.choice {
     background-color: #f8f9fa;
-    padding-right: 8px;
+    padding: 8px 12px;
+    min-width: 200px;
 }
 
 .btn-record.playing {
@@ -410,13 +414,20 @@ select {
 /* 響應式設計 */
 @media (max-width: 768px) {
     .choice-buttons {
-        flex-direction: column;
-        gap: 4px;
+        flex-direction: row;
+        gap: 8px;
+        justify-content: center;
     }
     
     .play-choice,
     .continue-choice {
+        flex: 1;
+        min-width: unset;
+        padding: 8px 12px;
+    }
+
+    .btn-record.choice {
+        min-width: unset;
         width: 100%;
-        padding: 6px 12px;
     }
 }
