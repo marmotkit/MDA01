@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>面對面翻譯助手</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <button class="fullscreen-btn" onclick="toggleFullScreen()">
+        <i class="fas fa-expand"></i>
+    </button>
     <div class="container">
         <!-- 上半部分（翻轉區域） -->
         <div class="split-section top-section">
@@ -42,5 +46,34 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+                document.querySelector('.fullscreen-btn i').classList.remove('fa-expand');
+                document.querySelector('.fullscreen-btn i').classList.add('fa-compress');
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    document.querySelector('.fullscreen-btn i').classList.remove('fa-compress');
+                    document.querySelector('.fullscreen-btn i').classList.add('fa-expand');
+                }
+            }
+        }
+
+        // 監聽全螢幕變化
+        document.addEventListener('fullscreenchange', function() {
+            const icon = document.querySelector('.fullscreen-btn i');
+            if (document.fullscreenElement) {
+                icon.classList.remove('fa-expand');
+                icon.classList.add('fa-compress');
+            } else {
+                icon.classList.remove('fa-compress');
+                icon.classList.add('fa-expand');
+            }
+        });
+    </script>
 </body>
 </html>

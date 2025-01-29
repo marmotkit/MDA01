@@ -431,3 +431,32 @@ select {
         width: 100%;
     }
 }
+
+/* 全螢幕按鈕樣式 */
+.fullscreen-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.fullscreen-btn:hover {
+    transform: scale(1.1);
+    background-color: white;
+}
+
+.fullscreen-btn i {
+    font-size: 1.2rem;
+    color: var(--dark-color);
+}
