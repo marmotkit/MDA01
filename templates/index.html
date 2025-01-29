@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,91 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* 主題相關變量 */
+        html[data-theme="light"] {
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --chat-bg: white;
+            --chat-left-bg: #E3F2FD;
+            --chat-right-bg: #E8F5E9;
+            --chat-left-text: #1565C0;
+            --chat-right-text: #2E7D32;
+            --control-bg: white;
+            --border-color: #e0e0e0;
+            --button-hover: #e0e0e0;
+        }
+
+        html[data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --chat-bg: #2d2d2d;
+            --chat-left-bg: #1565C0;
+            --chat-right-bg: #2E7D32;
+            --chat-left-text: #ffffff;
+            --chat-right-text: #ffffff;
+            --control-bg: #2d2d2d;
+            --border-color: #404040;
+            --button-hover: #404040;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .chat-container {
+            background: var(--chat-bg);
+        }
+
+        .control-panel {
+            background: var(--control-bg);
+        }
+
+        .chat-bubble.left {
+            background: var(--chat-left-bg);
+            color: var(--chat-left-text);
+        }
+
+        .chat-bubble.right {
+            background: var(--chat-right-bg);
+            color: var(--chat-right-text);
+        }
+
+        select {
+            background: var(--chat-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .btn-record {
+            background-color: var(--button-hover);
+            color: var(--text-color);
+        }
+
+        /* 主題切換按鈕樣式 */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--chat-bg);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
         /* 安裝提示樣式 */
         .install-prompt {
             position: fixed;
@@ -95,6 +180,11 @@
     </style>
 </head>
 <body>
+    <!-- 主題切換按鈕 -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="切換深淺色主題">
+        <i class="fas fa-moon"></i>
+    </button>
+
     <div class="container">
         <!-- 上半部分（翻轉區域） -->
         <div class="split-section top-section">
@@ -213,6 +303,33 @@
                 container.appendChild(clearBtn);
             }
         }
+
+        // 主題切換功能
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.querySelector('.theme-toggle i');
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            html.setAttribute('data-theme', newTheme);
+            themeIcon.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            
+            // 保存主題設置到本地存儲
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // 初始化主題
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const html = document.documentElement;
+            const themeIcon = document.querySelector('.theme-toggle i');
+            
+            html.setAttribute('data-theme', savedTheme);
+            themeIcon.className = savedTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+
+        // 頁面加載時初始化主題
+        document.addEventListener('DOMContentLoaded', initTheme);
     </script>
 </body>
 </html>
