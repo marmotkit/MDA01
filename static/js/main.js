@@ -437,6 +437,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // 添加靜音按鈕到每個控制面板
+    document.querySelectorAll('.control-panel').forEach(panel => {
+        const muteButton = document.createElement('button');
+        muteButton.className = 'btn btn-mute';
+        muteButton.textContent = isMuted ? '🔇' : '🔊';
+        muteButton.onclick = toggleMute;
+        panel.insertBefore(muteButton, panel.querySelector('.btn-record'));
+    });
 });
 
 // 修改音頻播放邏輯
