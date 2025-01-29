@@ -157,12 +157,37 @@ function handleRecognitionEnd() {
     stopRecording();
 }
 
+// 創建一個短的靜音音頻
+function createSilentAudio() {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 0;  // 完全靜音
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start();
+    setTimeout(() => {
+        oscillator.stop();
+        audioContext.close();
+    }, 50);
+}
+
 // 開始錄音
-function startRecording(button) {
+async function startRecording(button) {
     try {
         if (isRecording) {
             stopRecording();
             return;
+        }
+
+        // 如果是第一次點擊，初始化音頻
+        if (!userInteracted) {
+            console.log('首次用戶交互，初始化音頻...');
+            userInteracted = true;
+            isMuted = false;
+            await initAudioContext();
+            // 播放靜音音頻來解鎖自動播放
+            createSilentAudio();
         }
 
         const section = button.closest('.split-section');
@@ -357,17 +382,31 @@ async function playAudio(audio, listenerSection) {
             audioContext: audioContext?.state
         });
 
-        // 如果用戶還沒有交互，嘗試觸發一次交互初始化
-        if (!userInteracted) {
-            await initOnUserInteraction({ type: 'system' });
-        }
-
         // 確保音頻上下文是活動的
         await initAudioContext();
         
         // 設置音頻屬性
         audio.volume = 1.0;
         audio.muted = false;
+        
+        // 嘗試播放前先加載一段
+        await new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new Error('音頻加載超時'));
+            }, 5000);
+
+            audio.addEventListener('canplaythrough', () => {
+                clearTimeout(timeoutId);
+                resolve();
+            }, { once: true });
+
+            audio.addEventListener('error', (e) => {
+                clearTimeout(timeoutId);
+                reject(e);
+            }, { once: true });
+
+            audio.load();
+        });
         
         // 嘗試播放
         await audio.play();
