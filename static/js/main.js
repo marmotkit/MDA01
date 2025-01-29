@@ -18,18 +18,44 @@ let isMuted = true;  // 默認靜音
 
 // 初始化語音識別
 function initSpeechRecognition(targetLang) {
-    if (recognition) {
-        recognition.stop();
+    try {
+        if (recognition) {
+            recognition.stop();
+        }
+
+        if (!('webkitSpeechRecognition' in window)) {
+            console.error('瀏覽器不支持語音識別');
+            alert('您的瀏覽器不支持語音識別功能，請使用 Chrome 瀏覽器。');
+            return;
+        }
+
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;  // 改為單次識別
+        recognition.interimResults = true;
+        recognition.lang = targetLang;
+
+        console.log('初始化語音識別:', { targetLang });
+
+        recognition.onstart = () => {
+            console.log('開始語音識別');
+        };
+
+        recognition.onresult = handleRecognitionResult;
+        
+        recognition.onerror = (event) => {
+            console.error('語音識別錯誤:', event.error);
+            stopRecording();
+        };
+        
+        recognition.onend = () => {
+            console.log('語音識別結束');
+            stopRecording();
+        };
+
+    } catch (error) {
+        console.error('初始化語音識別失敗:', error);
+        stopRecording();
     }
-
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = false;  // 改為單次識別
-    recognition.interimResults = true;
-    recognition.lang = targetLang;
-
-    recognition.onresult = handleRecognitionResult;
-    recognition.onerror = handleRecognitionError;
-    recognition.onend = handleRecognitionEnd;
 }
 
 // 處理語音識別結果
@@ -46,10 +72,19 @@ function handleRecognitionResult(event) {
         }
     }
 
+    console.log('語音識別結果:', { finalTranscript, interimTranscript });
+
     if (finalTranscript) {
         const activeSection = document.querySelector('.btn-record.recording').closest('.split-section');
+        if (!activeSection) {
+            console.error('找不到活動的錄音區域');
+            return;
+        }
+
         const targetLang = activeSection.querySelector('.language-select').value;
         const isTopSection = activeSection.classList.contains('top-section');
+        
+        console.log('準備翻譯:', { text: finalTranscript, targetLang, isTopSection });
         
         // 自動停止錄音
         stopRecording();
@@ -73,31 +108,44 @@ function handleRecognitionEnd() {
 
 // 開始錄音
 function startRecording(button) {
-    if (isRecording) {
-        stopRecording();
-        return;
-    }
-
-    const section = button.closest('.split-section');
-    const targetLang = section.querySelector('.language-select').value;
-    
-    // 停止其他部分的錄音
-    document.querySelectorAll('.btn-record').forEach(btn => {
-        if (btn !== button && btn.classList.contains('recording')) {
-            stopRecording(btn);
+    try {
+        if (isRecording) {
+            stopRecording();
+            return;
         }
-    });
 
-    initSpeechRecognition(targetLang);
-    
-    isRecording = true;
-    button.classList.add('recording');
-    button.innerHTML = `
-        <span class="status-indicator active"></span>
-        ${section.classList.contains('top-section') ? 'Stop' : '停止對話'}
-    `;
-    
-    recognition.start();
+        const section = button.closest('.split-section');
+        const targetLang = section.querySelector('.language-select').value;
+        
+        console.log('開始錄音:', { targetLang });
+        
+        // 停止其他部分的錄音
+        document.querySelectorAll('.btn-record').forEach(btn => {
+            if (btn !== button && btn.classList.contains('recording')) {
+                stopRecording(btn);
+            }
+        });
+
+        initSpeechRecognition(targetLang);
+        
+        if (!recognition) {
+            console.error('語音識別未初始化');
+            return;
+        }
+        
+        isRecording = true;
+        button.classList.add('recording');
+        button.innerHTML = `
+            <span class="status-indicator active"></span>
+            ${section.classList.contains('top-section') ? 'Stop' : '停止對話'}
+        `;
+        
+        recognition.start();
+
+    } catch (error) {
+        console.error('開始錄音失敗:', error);
+        stopRecording();
+    }
 }
 
 // 停止錄音
@@ -146,6 +194,11 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         const listenerLang = document.querySelector(`${listenerSection} .language-select`).value;
         
         console.log('開始翻譯請求:', { text, sourceLang: targetLang, targetLang: listenerLang });
+        
+        // 在說話者的聊天框顯示原文
+        const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
+        addChatBubble(text, 'right', false, speakerSection);
+
         const response = await fetch('/translate', {
             method: 'POST',
             headers: {
@@ -159,17 +212,15 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
         });
 
         if (!response.ok) {
-            throw new Error('翻譯請求失敗');
+            throw new Error(`翻譯請求失敗: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
         console.log('收到翻譯響應:', data);
         
-        // 確定說話者和聽者的區域
-        const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
-        
-        // 在說話者的聊天框顯示原文
-        addChatBubble(text, 'right', false, speakerSection);
+        if (data.error) {
+            throw new Error(`翻譯錯誤: ${data.error}`);
+        }
         
         // 在聽者的聊天框顯示翻譯
         if (data.translated_text) {
@@ -191,13 +242,18 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     }
 
                     // 使用 fetch 先完整下載音頻文件
-                    const response = await fetch(data.audio_url, {
+                    const audioResponse = await fetch(data.audio_url, {
                         headers: {
                             'Range': 'bytes=0-',  // 請求完整文件
                             'Cache-Control': 'no-cache'  // 禁用緩存
                         }
                     });
-                    const audioBlob = await response.blob();
+
+                    if (!audioResponse.ok) {
+                        throw new Error(`音頻下載失敗: ${audioResponse.status} ${audioResponse.statusText}`);
+                    }
+
+                    const audioBlob = await audioResponse.blob();
                     const audioUrl = URL.createObjectURL(audioBlob);
 
                     // 創建新的音頻對象
@@ -268,6 +324,7 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
 
     } catch (error) {
         console.error('翻譯或播放錯誤:', error);
+        alert('翻譯或播放過程中發生錯誤：' + error.message);
         const playButton = isTopSection ? bottomSectionPlayButton : topSectionPlayButton;
         if (playButton) {
             playButton.textContent = '重新播放';
