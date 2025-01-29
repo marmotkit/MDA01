@@ -45,6 +45,7 @@ body {
 
 .bottom-section {
     border-top: 2px solid var(--primary-color);
+    margin-bottom: 25px;
 }
 
 /* 聊天容器樣式 */
@@ -447,4 +448,18 @@ select {
 /* 移除全螢幕按鈕樣式 */
 .fullscreen-btn {
     display: none;
+}
+
+/* 版權信息樣式 */
+.copyright {
+    position: fixed;
+    bottom: 5px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 0.8em;
+    color: var(--text-color);
+    opacity: 0.7;
+    padding: 5px;
+    z-index: 1000;
 }

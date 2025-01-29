@@ -274,6 +274,11 @@
         </div>
     </div>
 
+    <!-- 版權信息 -->
+    <div class="copyright">
+        Copy Right: KT. Liang v3.8
+    </div>
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
         // PWA 安裝相關代碼
@@ -320,8 +325,13 @@
         // 清除對話功能
         function clearChat(section) {
             if (confirm('確定要清除所有對話嗎？')) {
-                const container = document.getElementById(`chatContainer-${section}`);
-                container.innerHTML = '';
+                // 清除上方對話
+                const topContainer = document.getElementById('chatContainer-top');
+                topContainer.innerHTML = '';
+                
+                // 清除下方對話
+                const bottomContainer = document.getElementById('chatContainer-bottom');
+                bottomContainer.innerHTML = '';
             }
         }
 
