@@ -163,11 +163,14 @@
         }
         
         /* 清除按鈕樣式 */
+        .control-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .clear-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--button-bg);
             border: none;
             border-radius: 50%;
             width: 32px;
@@ -176,9 +179,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #666;
+            color: var(--text-color);
             transition: all 0.3s ease;
-            z-index: 10;
         }
         
         .clear-btn:hover {
@@ -186,13 +188,14 @@
             color: white;
             transform: rotate(90deg);
         }
-        
-        .top-section .clear-btn {
-            transform: rotate(180deg);
-        }
-        
-        .top-section .clear-btn:hover {
-            transform: rotate(90deg);
+
+        .control-panel {
+            background: var(--control-bg);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
         }
     </style>
 </head>
@@ -206,23 +209,25 @@
         <!-- 上半部分（翻轉區域） -->
         <div class="split-section top-section">
             <div id="chatContainer-top" class="chat-container">
-                <button class="clear-btn" onclick="clearChat('top')">
-                    <i class="fas fa-trash"></i>
-                </button>
             </div>
             <div class="control-panel">
-                <select class="language-select">
-                    <option value="zh-TW">中文（台灣）</option>
-                    <option value="zh-CN">漢語（中國）</option>
-                    <option value="yue">粵語（香港）</option>
-                    <option value="en-US">English</option>
-                    <option value="ja-JP">日本語</option>
-                    <option value="ko-KR">한국어</option>
-                    <option value="th-TH">ภาษาไทย</option>
-                    <option value="vi-VN">Tiếng Việt</option>
-                    <option value="fr-FR">Français</option>
-                    <option value="es-ES">Español</option>
-                </select>
+                <div class="control-left">
+                    <select class="language-select">
+                        <option value="zh-TW">中文（台灣）</option>
+                        <option value="zh-CN">漢語（中國）</option>
+                        <option value="yue">粵語（香港）</option>
+                        <option value="en-US">English</option>
+                        <option value="ja-JP">日本語</option>
+                        <option value="ko-KR">한국어</option>
+                        <option value="th-TH">ภาษาไทย</option>
+                        <option value="vi-VN">Tiếng Việt</option>
+                        <option value="fr-FR">Français</option>
+                        <option value="es-ES">Español</option>
+                    </select>
+                    <button class="clear-btn" onclick="clearChat('top')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
                 <button class="btn btn-record">
                     <span class="status-indicator"></span>
                     開始對話
@@ -233,23 +238,25 @@
         <!-- 下半部分 -->
         <div class="split-section bottom-section">
             <div id="chatContainer-bottom" class="chat-container">
-                <button class="clear-btn" onclick="clearChat('bottom')">
-                    <i class="fas fa-trash"></i>
-                </button>
             </div>
             <div class="control-panel">
-                <select class="language-select">
-                    <option value="en-US">English</option>
-                    <option value="zh-TW">中文（台灣）</option>
-                    <option value="zh-CN">漢語（中國）</option>
-                    <option value="yue">粵語（香港）</option>
-                    <option value="ja-JP">日本語</option>
-                    <option value="ko-KR">한국어</option>
-                    <option value="th-TH">ภาษาไทย</option>
-                    <option value="vi-VN">Tiếng Việt</option>
-                    <option value="fr-FR">Français</option>
-                    <option value="es-ES">Español</option>
-                </select>
+                <div class="control-left">
+                    <select class="language-select">
+                        <option value="en-US">English</option>
+                        <option value="zh-TW">中文（台灣）</option>
+                        <option value="zh-CN">漢語（中國）</option>
+                        <option value="yue">粵語（香港）</option>
+                        <option value="ja-JP">日本語</option>
+                        <option value="ko-KR">한국어</option>
+                        <option value="th-TH">ภาษาไทย</option>
+                        <option value="vi-VN">Tiếng Việt</option>
+                        <option value="fr-FR">Français</option>
+                        <option value="es-ES">Español</option>
+                    </select>
+                    <button class="clear-btn" onclick="clearChat('bottom')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
                 <button class="btn btn-record">
                     <span class="status-indicator"></span>
                     Start Speaking
