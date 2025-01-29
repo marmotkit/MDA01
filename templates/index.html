@@ -59,13 +59,50 @@
             background: #e0e0e0;
             color: #333;
         }
+        
+        /* 清除按鈕樣式 */
+        .clear-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .clear-btn:hover {
+            background: #f44336;
+            color: white;
+            transform: rotate(90deg);
+        }
+        
+        .top-section .clear-btn {
+            transform: rotate(180deg);
+        }
+        
+        .top-section .clear-btn:hover {
+            transform: rotate(90deg);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- 上半部分（翻轉區域） -->
         <div class="split-section top-section">
-            <div id="chatContainer-top" class="chat-container"></div>
+            <div id="chatContainer-top" class="chat-container">
+                <button class="clear-btn" onclick="clearChat('top')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
             <div class="control-panel">
                 <select class="language-select">
                     <option value="zh-TW">中文（台灣）</option>
@@ -88,7 +125,11 @@
 
         <!-- 下半部分 -->
         <div class="split-section bottom-section">
-            <div id="chatContainer-bottom" class="chat-container"></div>
+            <div id="chatContainer-bottom" class="chat-container">
+                <button class="clear-btn" onclick="clearChat('bottom')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
             <div class="control-panel">
                 <select class="language-select">
                     <option value="en-US">English</option>
@@ -160,6 +201,17 @@
         // 檢查是否已經安裝
         if (window.matchMedia('(display-mode: standalone)').matches) {
             document.getElementById('installPrompt').style.display = 'none';
+        }
+
+        // 清除對話功能
+        function clearChat(section) {
+            if (confirm('確定要清除此區域的對話嗎？')) {
+                const container = document.getElementById(`chatContainer-${section}`);
+                // 保留清除按鈕
+                const clearBtn = container.querySelector('.clear-btn');
+                container.innerHTML = '';
+                container.appendChild(clearBtn);
+            }
         }
     </script>
 </body>
