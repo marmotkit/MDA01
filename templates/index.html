@@ -22,6 +22,7 @@
                     <option value="yue">粵語（香港）</option>
                     <option value="en-US">English</option>
                     <option value="ja-JP">日本語</option>
+                    <option value="ko-KR">한국어</option>
                     <option value="th-TH">ภาษาไทย</option>
                     <option value="vi-VN">Tiếng Việt</option>
                     <option value="fr-FR">Français</option>
@@ -44,6 +45,7 @@
                     <option value="zh-CN">漢語（中國）</option>
                     <option value="yue">粵語（香港）</option>
                     <option value="ja-JP">日本語</option>
+                    <option value="ko-KR">한국어</option>
                     <option value="th-TH">ภาษาไทย</option>
                     <option value="vi-VN">Tiếng Việt</option>
                     <option value="fr-FR">Français</option>
@@ -62,64 +64,49 @@
         function toggleFullScreen() {
             const elem = document.documentElement;
             
-            // 修正全螢幕API檢查邏輯
-            const fullscreenEnabled = document.fullscreenEnabled || 
-                                    document.webkitFullscreenEnabled || 
-                                    document.mozFullScreenEnabled ||
-                                    document.msFullscreenEnabled;
-
-            if (!fullscreenEnabled) {
-                alert('您的瀏覽器不支援全螢幕功能');
-                return;
-            }
-
-            // 進入全螢幕
-            if (!document.fullscreenElement && 
-                !document.webkitFullscreenElement && 
-                !document.mozFullScreenElement && 
-                !document.msFullscreenElement) {
-                
-                try {
+            try {
+                // 直接嘗試進入/退出全螢幕
+                if (!document.fullscreenElement && 
+                    !document.webkitFullscreenElement && 
+                    !document.mozFullScreenElement && 
+                    !document.msFullscreenElement) {
+                    
+                    // 嘗試所有可能的全螢幕方法
                     if (elem.requestFullscreen) {
                         elem.requestFullscreen();
-                    } else if (elem.webkitRequestFullscreen) { // Safari
+                    } else if (elem.webkitRequestFullscreen) {
                         elem.webkitRequestFullscreen();
-                    } else if (elem.mozRequestFullScreen) { // Firefox
+                    } else if (elem.mozRequestFullScreen) {
                         elem.mozRequestFullScreen();
-                    } else if (elem.msRequestFullscreen) { // IE/Edge
+                    } else if (elem.msRequestFullscreen) {
                         elem.msRequestFullscreen();
+                    } else {
+                        throw new Error('No fullscreen method available');
                     }
-                } catch (err) {
-                    console.error('全螢幕切換失敗:', err);
-                    alert('切換全螢幕時發生錯誤');
-                }
-                
-                document.querySelector('.fullscreen-btn i').classList.remove('fa-expand');
-                document.querySelector('.fullscreen-btn i').classList.add('fa-compress');
-            } 
-            // 退出全螢幕
-            else {
-                try {
+                    
+                    document.querySelector('.fullscreen-btn i').classList.remove('fa-expand');
+                    document.querySelector('.fullscreen-btn i').classList.add('fa-compress');
+                } else {
                     if (document.exitFullscreen) {
                         document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) { // Safari
+                    } else if (document.webkitExitFullscreen) {
                         document.webkitExitFullscreen();
-                    } else if (document.mozCancelFullScreen) { // Firefox
+                    } else if (document.mozCancelFullScreen) {
                         document.mozCancelFullScreen();
-                    } else if (document.msExitFullscreen) { // IE/Edge
+                    } else if (document.msExitFullscreen) {
                         document.msExitFullscreen();
                     }
-                } catch (err) {
-                    console.error('退出全螢幕失敗:', err);
-                    alert('退出全螢幕時發生錯誤');
+                    
+                    document.querySelector('.fullscreen-btn i').classList.remove('fa-compress');
+                    document.querySelector('.fullscreen-btn i').classList.add('fa-expand');
                 }
-                
-                document.querySelector('.fullscreen-btn i').classList.remove('fa-compress');
-                document.querySelector('.fullscreen-btn i').classList.add('fa-expand');
+            } catch (err) {
+                console.error('全螢幕切換失敗:', err);
+                alert('您的瀏覽器可能不支援全螢幕功能，請嘗試使用其他瀏覽器');
             }
         }
 
-        // 監聽全螢幕變化（跨瀏覽器支援）
+        // 監聽全螢幕變化
         document.addEventListener('fullscreenchange', updateFullscreenButton);
         document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
         document.addEventListener('mozfullscreenchange', updateFullscreenButton);
