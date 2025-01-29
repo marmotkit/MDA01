@@ -178,7 +178,7 @@ function updateButtonState(button, state, isTopSection) {
     
     switch (state) {
         case 'ready':
-            button.classList.remove('recording', 'playing', 'translating');
+            button.classList.remove('recording', 'playing', 'translating', 'choice');
             statusIndicator.classList.remove('active', 'playing', 'translating');
             button.innerHTML = `
                 <span class="status-indicator"></span>
@@ -188,7 +188,7 @@ function updateButtonState(button, state, isTopSection) {
             
         case 'recording':
             button.classList.add('recording');
-            button.classList.remove('playing', 'translating');
+            button.classList.remove('playing', 'translating', 'choice');
             statusIndicator.classList.add('active');
             statusIndicator.classList.remove('playing', 'translating');
             button.innerHTML = `
@@ -199,7 +199,7 @@ function updateButtonState(button, state, isTopSection) {
             
         case 'translating':
             button.classList.add('translating');
-            button.classList.remove('recording', 'playing');
+            button.classList.remove('recording', 'playing', 'choice');
             statusIndicator.classList.add('translating');
             statusIndicator.classList.remove('active', 'playing');
             button.innerHTML = `
@@ -208,14 +208,43 @@ function updateButtonState(button, state, isTopSection) {
             `;
             break;
             
+        case 'choice':
+            button.classList.add('choice');
+            button.classList.remove('recording', 'playing', 'translating');
+            statusIndicator.classList.remove('active', 'playing', 'translating');
+            button.innerHTML = `
+                <span class="status-indicator"></span>
+                <div class="choice-buttons">
+                    <button class="play-choice">${isTopSection ? 'Play' : '播放'}</button>
+                    <button class="continue-choice">${isTopSection ? 'Continue' : '繼續翻譯'}</button>
+                </div>
+            `;
+            
+            // 添加選擇按鈕的事件監聽器
+            const playBtn = button.querySelector('.play-choice');
+            const continueBtn = button.querySelector('.continue-choice');
+            
+            playBtn.onclick = (e) => {
+                e.stopPropagation();  // 防止觸發按鈕的點擊事件
+                if (currentAudioUrl) {
+                    playAudio(button, isTopSection);
+                }
+            };
+            
+            continueBtn.onclick = (e) => {
+                e.stopPropagation();  // 防止觸發按鈕的點擊事件
+                updateButtonState(button, 'ready', isTopSection);
+            };
+            break;
+            
         case 'playing':
             button.classList.add('playing');
-            button.classList.remove('recording', 'translating');
+            button.classList.remove('recording', 'translating', 'choice');
             statusIndicator.classList.add('playing');
             statusIndicator.classList.remove('active', 'translating');
             button.innerHTML = `
                 <span class="status-indicator playing"></span>
-                ${isTopSection ? 'Playing...' : '播放中...'}
+                ${isTopSection ? 'Stop Playing' : '停止播放'}
             `;
             break;
     }
@@ -305,7 +334,55 @@ function stopRecording(button) {
     }
 }
 
-// 修改翻譯和播放函數
+// 修改音頻播放函數
+async function playAudio(button, isTopSection) {
+    try {
+        if (!currentAudioUrl) {
+            console.error('沒有可用的音頻');
+            return;
+        }
+
+        // 如果正在播放，則停止播放
+        if (button.classList.contains('playing')) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            updateButtonState(button, 'choice', isTopSection);
+            return;
+        }
+
+        // 創建新的音頻對象
+        const audio = new Audio(currentAudioUrl);
+        currentAudio = audio;
+
+        // 設置音頻事件
+        audio.addEventListener('ended', () => {
+            console.log('音頻播放結束');
+            updateButtonState(button, 'choice', isTopSection);
+            currentAudio = null;
+        });
+
+        audio.addEventListener('error', (e) => {
+            console.error('音頻播放錯誤:', e);
+            updateButtonState(button, 'choice', isTopSection);
+            currentAudio = null;
+        });
+
+        // 更新按鈕狀態為播放中
+        updateButtonState(button, 'playing', isTopSection);
+        
+        // 播放音頻
+        await audio.play();
+        console.log('音頻開始播放');
+
+    } catch (error) {
+        console.error('音頻播放失敗:', error);
+        updateButtonState(button, 'choice', isTopSection);
+    }
+}
+
+// 修改翻譯函數
 async function translateAndSpeak(text, targetLang, isTopSection) {
     try {
         const speakerSection = isTopSection ? '.top-section' : '.bottom-section';
@@ -344,50 +421,15 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
             addChatBubble(data.translated_text, 'left', true, listenerSection);
             
             if (data.audio_url) {
-                try {
-                    console.log('準備播放翻譯音頻:', data.audio_url);
-                    
-                    // 停止當前播放的音頻
-                    if (currentAudio) {
-                        currentAudio.pause();
-                        currentAudio = null;
-                    }
-
-                    // 創建新的音頻對象
-                    const audio = new Audio(data.audio_url);
-                    currentAudio = audio;
-                    currentAudioUrl = data.audio_url;
-
-                    // 設置音頻事件
-                    audio.addEventListener('ended', () => {
-                        console.log('音頻播放結束');
-                        updateButtonState(button, 'ready', isTopSectionButton);
-                        currentAudio = null;
-                    });
-
-                    audio.addEventListener('error', (e) => {
-                        console.error('音頻播放錯誤:', e);
-                        updateButtonState(button, 'ready', isTopSectionButton);
-                        currentAudio = null;
-                    });
-
-                    // 播放音頻前先更新按鈕狀態
-                    updateButtonState(button, 'playing', isTopSectionButton);
-                    
-                    // 播放音頻
-                    await audio.play();
-                    console.log('音頻開始播放');
-
-                } catch (error) {
-                    console.error('音頻處理失敗:', error);
-                    updateButtonState(button, 'ready', isTopSectionButton);
-                }
+                currentAudioUrl = data.audio_url;
+                // 翻譯完成後，顯示選擇按鈕
+                updateButtonState(button, 'choice', isTopSectionButton);
             }
         }
 
     } catch (error) {
-        console.error('翻譯或播放錯誤:', error);
-        alert('翻譯或播放過程中發生錯誤：' + error.message);
+        console.error('翻譯錯誤:', error);
+        alert('翻譯過程中發生錯誤：' + error.message);
         const button = document.querySelector(`${speakerSection} .btn-record`);
         const isTopSectionButton = button.closest('.split-section').classList.contains('top-section');
         updateButtonState(button, 'ready', isTopSectionButton);

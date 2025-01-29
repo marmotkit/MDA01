@@ -396,3 +396,66 @@ select {
         margin: 5px 0;
     }
 }
+
+/* 選擇按鈕容器 */
+.choice-buttons {
+    display: flex;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+/* 選擇按鈕樣式 */
+.play-choice,
+.continue-choice {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.play-choice {
+    background-color: #00C851;
+    color: white;
+}
+
+.continue-choice {
+    background-color: #ffbb33;
+    color: white;
+}
+
+.play-choice:hover {
+    background-color: #00a844;
+    transform: translateY(-1px);
+}
+
+.continue-choice:hover {
+    background-color: #ff9900;
+    transform: translateY(-1px);
+}
+
+/* 修改按鈕狀態樣式 */
+.btn-record.choice {
+    background-color: #f8f9fa;
+    padding-right: 8px;
+}
+
+.btn-record.playing {
+    background-color: #00C851;
+    color: white;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .choice-buttons {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .play-choice,
+    .continue-choice {
+        width: 100%;
+        padding: 6px 12px;
+    }
+}
