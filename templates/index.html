@@ -28,6 +28,8 @@
             --control-bg: white;
             --border-color: #e0e0e0;
             --button-hover: #e0e0e0;
+            --button-text: #333;
+            --button-bg: #f0f0f0;
         }
 
         html[data-theme="dark"] {
@@ -41,6 +43,8 @@
             --control-bg: #2d2d2d;
             --border-color: #404040;
             --button-hover: #404040;
+            --button-text: #ffffff;
+            --button-bg: #333333;
         }
 
         body {
@@ -73,8 +77,21 @@
         }
 
         .btn-record {
+            position: relative;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-record:hover {
             background-color: var(--button-hover);
-            color: var(--text-color);
         }
 
         /* 主題切換按鈕樣式 */

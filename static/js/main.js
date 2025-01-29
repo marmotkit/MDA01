@@ -386,7 +386,7 @@ async function playAudio(button, isTopSection) {
 
             audio.addEventListener('ended', () => {
                 console.log('音頻播放結束');
-                updateButtonState(button, 'choice', isTopSection);
+                updateButtonState(button, 'ready', isTopSection);  // 改為直接回到 ready 狀態
                 currentAudio = null;
                 URL.revokeObjectURL(audioObjectUrl);  // 釋放 URL
             });
