@@ -19,31 +19,41 @@ let isMuted = true;  // 默認靜音
 // 初始化語音識別
 function initSpeechRecognition(targetLang) {
     try {
-        if (recognition) {
-            recognition.stop();
-        }
-
-        if (!('webkitSpeechRecognition' in window)) {
+        if (!window.webkitSpeechRecognition && !window.SpeechRecognition) {
             console.error('瀏覽器不支持語音識別');
             alert('您的瀏覽器不支持語音識別功能，請使用 Chrome 瀏覽器。');
             return;
         }
 
-        recognition = new webkitSpeechRecognition();
+        if (recognition) {
+            recognition.stop();
+            recognition = null;
+        }
+
+        // 使用標準 SpeechRecognition 或 webkitSpeechRecognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+
         recognition.continuous = false;  // 改為單次識別
         recognition.interimResults = true;
         recognition.lang = targetLang;
+        recognition.maxAlternatives = 1;
 
         console.log('初始化語音識別:', { targetLang });
 
         recognition.onstart = () => {
             console.log('開始語音識別');
+            isRecording = true;
         };
 
-        recognition.onresult = handleRecognitionResult;
+        recognition.onresult = (event) => {
+            console.log('收到語音識別結果:', event);
+            handleRecognitionResult(event);
+        };
         
         recognition.onerror = (event) => {
             console.error('語音識別錯誤:', event.error);
+            alert('語音識別錯誤: ' + event.error);
             stopRecording();
         };
         
@@ -52,9 +62,13 @@ function initSpeechRecognition(targetLang) {
             stopRecording();
         };
 
+        return recognition;
+
     } catch (error) {
         console.error('初始化語音識別失敗:', error);
+        alert('初始化語音識別失敗: ' + error.message);
         stopRecording();
+        return null;
     }
 }
 
@@ -126,47 +140,54 @@ function startRecording(button) {
             }
         });
 
-        initSpeechRecognition(targetLang);
+        const newRecognition = initSpeechRecognition(targetLang);
         
-        if (!recognition) {
+        if (!newRecognition) {
             console.error('語音識別未初始化');
             return;
         }
         
-        isRecording = true;
         button.classList.add('recording');
         button.innerHTML = `
             <span class="status-indicator active"></span>
             ${section.classList.contains('top-section') ? 'Stop' : '停止對話'}
         `;
         
-        recognition.start();
+        newRecognition.start();
+        console.log('語音識別已啟動');
 
     } catch (error) {
         console.error('開始錄音失敗:', error);
+        alert('開始錄音失敗: ' + error.message);
         stopRecording();
     }
 }
 
 // 停止錄音
 function stopRecording(button) {
-    if (!button) {
-        button = document.querySelector('.btn-record.recording');
+    try {
+        if (!button) {
+            button = document.querySelector('.btn-record.recording');
+        }
+        
+        if (!button) return;
+        
+        if (recognition) {
+            recognition.stop();
+            recognition = null;
+        }
+        
+        isRecording = false;
+        button.classList.remove('recording');
+        const isTopSection = button.closest('.split-section').classList.contains('top-section');
+        button.innerHTML = `
+            <span class="status-indicator"></span>
+            ${isTopSection ? 'Start Speaking' : '開始對話'}
+        `;
+    } catch (error) {
+        console.error('停止錄音失敗:', error);
+        alert('停止錄音失敗: ' + error.message);
     }
-    
-    if (!button) return;
-    
-    if (recognition) {
-        recognition.stop();
-    }
-    
-    isRecording = false;
-    button.classList.remove('recording');
-    const isTopSection = button.closest('.split-section').classList.contains('top-section');
-    button.innerHTML = `
-        <span class="status-indicator"></span>
-        ${isTopSection ? 'Start Speaking' : '開始對話'}
-    `;
 }
 
 // 翻譯並播放
