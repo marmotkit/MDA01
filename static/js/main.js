@@ -9,8 +9,9 @@ let currentAudioUrl = null;
 let topSectionPlayButton = null;
 let bottomSectionPlayButton = null;
 
-// 添加全局變量來追踪自動播放狀態
+// 添加全局變量來追踪自動播放狀態和用戶交互
 let autoplayEnabled = false;
+let userInteracted = false;
 
 // 添加全局變量
 let isMuted = true;  // 默認靜音
@@ -123,6 +124,23 @@ function stopRecording(button) {
 // 翻譯並播放
 async function translateAndSpeak(text, targetLang, isTopSection) {
     try {
+        // 確保音頻上下文已初始化
+        if (!userInteracted) {
+            console.warn('用戶尚未與頁面交互，等待用戶交互...');
+            await new Promise(resolve => {
+                const checkInteraction = () => {
+                    if (userInteracted) {
+                        resolve();
+                    } else {
+                        setTimeout(checkInteraction, 100);
+                    }
+                };
+                checkInteraction();
+            });
+        }
+
+        await initAudioContext();
+
         // 獲取對方區域的語言設置
         const listenerSection = isTopSection ? '.bottom-section' : '.top-section';
         const listenerLang = document.querySelector(`${listenerSection} .language-select`).value;
@@ -185,8 +203,8 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 創建新的音頻對象
                     const audio = new Audio();
                     audio.preload = 'auto';
-                    audio.volume = isMuted ? 0 : 1.0;
-                    audio.muted = isMuted;
+                    audio.volume = 0;  // 初始音量設為0
+                    audio.muted = true;  // 初始設為靜音
                     currentAudio = audio;
 
                     // 設置音頻源
@@ -204,29 +222,21 @@ async function translateAndSpeak(text, targetLang, isTopSection) {
                     // 先嘗試靜音播放
                     try {
                         await audio.play();
-                        console.log('靜音播放成功，準備取消靜音');
+                        console.log('靜音播放成功');
                         
-                        // 等待用戶交互後取消靜音
-                        const unmuteAudio = async () => {
-                            try {
-                                audio.muted = false;
-                                audio.volume = 1.0;
-                                console.log('音頻已取消靜音');
-                                updatePlayButtonState(listenerSection, '播放中...', true);
-                                
-                                // 移除事件監聽器
-                                document.removeEventListener('click', unmuteAudio);
-                                document.removeEventListener('touchstart', unmuteAudio);
-                                document.removeEventListener('keydown', unmuteAudio);
-                            } catch (error) {
-                                console.error('取消靜音失敗:', error);
+                        // 漸進式增加音量
+                        const fadeIn = () => {
+                            if (audio.volume < 1.0) {
+                                audio.volume += 0.1;
+                                setTimeout(fadeIn, 50);
                             }
                         };
 
-                        // 添加用戶交互事件監聽
-                        document.addEventListener('click', unmuteAudio, { once: true });
-                        document.addEventListener('touchstart', unmuteAudio, { once: true });
-                        document.addEventListener('keydown', unmuteAudio, { once: true });
+                        // 取消靜音並開始漸進式增加音量
+                        audio.muted = false;
+                        fadeIn();
+                        
+                        updatePlayButtonState(listenerSection, '播放中...', true);
 
                         // 監聽播放結束事件
                         audio.addEventListener('ended', () => {
@@ -391,23 +401,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 await audioContext.resume();
             }
             console.log('音頻上下文已初始化並解除暫停，狀態:', audioContext.state);
-
-            // 創建一個靜音的音頻並播放，以解除自動播放限制
-            const silentAudio = new Audio();
-            silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-            try {
-                await silentAudio.play();
-                console.log('成功解除自動播放限制');
-            } catch (error) {
-                console.warn('無法解除自動播放限制:', error);
-            }
+            return true;
         } catch (error) {
             console.error('音頻上下文初始化失敗:', error);
+            return false;
         }
     };
 
-    // 在用戶首次點擊或觸摸時初始化音頻
+    // 在用戶首次交互時初始化音頻
     const initOnUserInteraction = async (event) => {
+        userInteracted = true;
         await initAudioContext();
         // 移除所有事件監聽器
         document.removeEventListener('click', initOnUserInteraction);
