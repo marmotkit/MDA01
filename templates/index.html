@@ -15,11 +15,53 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 安裝提示樣式 */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+            text-align: center;
+            max-width: 90%;
+            width: 320px;
+        }
+        
+        .install-prompt p {
+            margin: 0 0 10px 0;
+        }
+        
+        .install-prompt .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .install-prompt button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .install-prompt .install-btn {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .install-prompt .close-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
-    <button class="fullscreen-btn" onclick="toggleFullScreen()">
-        <i class="fas fa-expand"></i>
-    </button>
     <div class="container">
         <!-- 上半部分（翻轉區域） -->
         <div class="split-section top-section">
@@ -68,71 +110,56 @@
         </div>
     </div>
 
+    <!-- 安裝提示 -->
+    <div class="install-prompt" id="installPrompt">
+        <p>將翻譯助手添加到主畫面，隨時使用！</p>
+        <div class="buttons">
+            <button class="install-btn" id="installBtn">安裝應用</button>
+            <button class="close-btn" id="closePromptBtn">稍後再說</button>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        function toggleFullScreen() {
-            const elem = document.documentElement;
-            
-            try {
-                // 直接嘗試進入/退出全螢幕
-                if (!document.fullscreenElement && 
-                    !document.webkitFullscreenElement && 
-                    !document.mozFullScreenElement && 
-                    !document.msFullscreenElement) {
-                    
-                    // 嘗試所有可能的全螢幕方法
-                    if (elem.requestFullscreen) {
-                        elem.requestFullscreen();
-                    } else if (elem.webkitRequestFullscreen) {
-                        elem.webkitRequestFullscreen();
-                    } else if (elem.mozRequestFullScreen) {
-                        elem.mozRequestFullScreen();
-                    } else if (elem.msRequestFullscreen) {
-                        elem.msRequestFullscreen();
-                    } else {
-                        throw new Error('No fullscreen method available');
-                    }
-                    
-                    document.querySelector('.fullscreen-btn i').classList.remove('fa-expand');
-                    document.querySelector('.fullscreen-btn i').classList.add('fa-compress');
-                } else {
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) {
-                        document.webkitExitFullscreen();
-                    } else if (document.mozCancelFullScreen) {
-                        document.mozCancelFullScreen();
-                    } else if (document.msExitFullscreen) {
-                        document.msExitFullscreen();
-                    }
-                    
-                    document.querySelector('.fullscreen-btn i').classList.remove('fa-compress');
-                    document.querySelector('.fullscreen-btn i').classList.add('fa-expand');
-                }
-            } catch (err) {
-                console.error('全螢幕切換失敗:', err);
-                alert('您的瀏覽器可能不支援全螢幕功能，請嘗試使用其他瀏覽器');
-            }
-        }
-
-        // 監聽全螢幕變化
-        document.addEventListener('fullscreenchange', updateFullscreenButton);
-        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-        document.addEventListener('mozfullscreenchange', updateFullscreenButton);
-        document.addEventListener('MSFullscreenChange', updateFullscreenButton);
-
-        function updateFullscreenButton() {
-            const icon = document.querySelector('.fullscreen-btn i');
-            if (document.fullscreenElement || 
-                document.webkitFullscreenElement || 
-                document.mozFullScreenElement || 
-                document.msFullscreenElement) {
-                icon.classList.remove('fa-expand');
-                icon.classList.add('fa-compress');
+        // PWA 安裝相關代碼
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // 阻止 Chrome 67 及更早版本自動顯示安裝提示
+            e.preventDefault();
+            // 保存安裝提示事件
+            deferredPrompt = e;
+            // 顯示自定義安裝提示
+            document.getElementById('installPrompt').style.display = 'block';
+        });
+        
+        // 處理安裝按鈕點擊
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                // 顯示安裝提示
+                deferredPrompt.prompt();
+                // 等待用戶回應
+                const { outcome } = await deferredPrompt.userChoice;
+                // 清理提示
+                deferredPrompt = null;
+                // 隱藏提示框
+                document.getElementById('installPrompt').style.display = 'none';
             } else {
-                icon.classList.remove('fa-compress');
-                icon.classList.add('fa-expand');
+                // 如果在iOS設備上
+                if (navigator.standalone !== undefined) {
+                    alert('請點擊分享按鈕，然後選擇"加入主畫面"選項來安裝應用');
+                }
             }
+        });
+        
+        // 處理關閉按鈕點擊
+        document.getElementById('closePromptBtn').addEventListener('click', () => {
+            document.getElementById('installPrompt').style.display = 'none';
+        });
+        
+        // 檢查是否已經安裝
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.getElementById('installPrompt').style.display = 'none';
         }
     </script>
 </body>
