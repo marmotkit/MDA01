@@ -320,17 +320,8 @@
         // 清除對話功能
         function clearChat(section) {
             if (confirm('確定要清除所有對話嗎？')) {
-                // 清除上方對話
-                const topContainer = document.getElementById('chatContainer-top');
-                const topClearBtn = topContainer.querySelector('.clear-btn');
-                topContainer.innerHTML = '';
-                topContainer.appendChild(topClearBtn);
-                
-                // 清除下方對話
-                const bottomContainer = document.getElementById('chatContainer-bottom');
-                const bottomClearBtn = bottomContainer.querySelector('.clear-btn');
-                bottomContainer.innerHTML = '';
-                bottomContainer.appendChild(bottomClearBtn);
+                const container = document.getElementById(`chatContainer-${section}`);
+                container.innerHTML = '';
             }
         }
 
