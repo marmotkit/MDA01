@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>生成圖標</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .icon-container {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .icon-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .icon-box img {
+            display: block;
+            margin: 10px auto;
+        }
+        .download-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .download-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>生成應用圖標</h1>
+    <p>請點擊下方按鈕下載圖標</p>
+    <div class="icon-container" id="iconContainer">
+        <!-- 圖標將在這裡顯示 -->
+    </div>
+
+    <script>
+        // 創建 Canvas 元素
+        function createCanvas(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            return canvas;
+        }
+
+        // 生成圖標
+        function generateIcon(size) {
+            const canvas = createCanvas(size);
+            const ctx = canvas.getContext('2d');
+            
+            // 設置背景
+            ctx.fillStyle = '#2196F3';
+            ctx.fillRect(0, 0, size, size);
+            
+            // 計算中心點和大小
+            const center = size / 2;
+            const bubbleSize = size * 0.35;
+            
+            // 繪製左側對話泡泡
+            ctx.beginPath();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.arc(center - bubbleSize/1.5, center, bubbleSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 繪製右側對話泡泡
+            ctx.beginPath();
+            ctx.fillStyle = '#E3F2FD';
+            ctx.arc(center + bubbleSize/1.5, center, bubbleSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 添加翻譯符號
+            ctx.beginPath();
+            ctx.strokeStyle = '#1565C0';
+            ctx.lineWidth = size * 0.04;
+            ctx.moveTo(center - bubbleSize/2, center);
+            ctx.lineTo(center + bubbleSize/2, center);
+            ctx.stroke();
+            
+            // 添加箭頭
+            const arrowSize = size * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(center + bubbleSize/2 - arrowSize, center - arrowSize);
+            ctx.lineTo(center + bubbleSize/2, center);
+            ctx.lineTo(center + bubbleSize/2 - arrowSize, center + arrowSize);
+            ctx.stroke();
+            
+            return canvas;
+        }
+
+        // 顯示圖標並創建下載按鈕
+        function displayAndDownloadIcon(size) {
+            const canvas = generateIcon(size);
+            const container = document.getElementById('iconContainer');
+            
+            const iconBox = document.createElement('div');
+            iconBox.className = 'icon-box';
+            
+            // 創建圖片預覽
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/png');
+            img.width = Math.min(size, 200);  // 限制預覽大小
+            img.height = Math.min(size, 200);
+            
+            // 創建下載按鈕
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'download-btn';
+            downloadBtn.textContent = `下載 ${size}x${size} 圖標`;
+            downloadBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.download = `icon-${size}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            };
+            
+            iconBox.appendChild(img);
+            iconBox.appendChild(downloadBtn);
+            container.appendChild(iconBox);
+        }
+
+        // 生成所有尺寸的圖標
+        [192, 512].forEach(size => displayAndDownloadIcon(size));
+    </script>
+</body>
+</html> 
